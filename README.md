@@ -1,4 +1,4 @@
-# Pixel 3D - Pro Staging Studio
+# Pixel AFrame - Pro Virtial Studio
 
 > A powerful browser-based virtual 3D modeling and staging application with AI-powered scene generation and VR/AR capabilities.
 
@@ -359,7 +359,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Pixel 3D - Pro Virtual Studio** - Creating the future of browser-based 3D design and VR experiences, one pixel at a time. 🚀
+**Pixel AFrame - Pro Virtual Studio** - Creating the future of browser-based 3D design and VR experiences, one pixel at a time. 🚀
 
 ![Pixel 3D Logo](./branding/pixel3d-logo.png)
 *[Replace with actual application logo]*
