@@ -1668,9 +1668,9 @@ Custom components are exported with the scene:
 - Save scene to browser localStorage with A-Frame support in [`js/fileManager.js:61-110`](js/fileManager.js:61)
 - Load scene from browser localStorage in [`js/fileManager.js:258-271`](js/fileManager.js:258)
 - Export scene as JSON file in [`js/fileManager.js:9-59`](js/fileManager.js:9)
-- Export A-Frame HTML file in [`js/fileManager.js:278-360`](js/fileManager.js:278)
+- Export A-Frame HTML file as ZIP in [`js/fileManager.js:278-360`](js/fileManager.js:278)
 - Load scene from JSON file in [`js/fileManager.js:181-198`](js/fileManager.js:181)
-- Added new header buttons in [`index.html:82-86`](index.html:82)
+- Added new header buttons in [`index.html:82-88`](index.html:82)
 - Added event handlers in [`js/ui.js:94-120`](js/ui.js:94)
 - Added keyboard shortcut Ctrl+Shift+L for loading from browser in [`js/ui.js:226-237`](js/ui.js:226)
 
@@ -1681,7 +1681,7 @@ Custom components are exported with the scene:
 <button class="btn" id="btn-load-browser"><i class="fas fa-cloud-upload-alt"></i> Load from Browser</button>
 <button class="btn primary" id="btn-save"><i class="fas fa-save"></i> Save to Browser</button>
 <button class="btn" id="btn-export-json"><i class="fas fa-file-code"></i> Export JSON</button>
-<button class="btn" id="btn-export"><i class="fas fa-download"></i> Export A-Frame</button>
+<button class="btn" id="btn-export"><i class="fas fa-file-zipper"></i> Export ZIP</button>
 ```
 
 ### 5.3 FileManager Methods
@@ -1704,10 +1704,11 @@ saveScene() {
     // ... download scene.json
 }
 
-// Export as A-Frame HTML
+// Export as A-Frame ZIP
 exportAsAFrameHTML() {
-    const htmlContent = this.generateAFrameHTML(entities);
-    // ... download aframe-scene.html
+    // Dynamically load JSZip if needed
+    // Creates ZIP with index.html, css/style.css, assets/ folder
+    // Downloads aframe-scene.zip
 }
 
 generateAFrameHTML(entities) {
@@ -1773,28 +1774,30 @@ generateAFrameHTML(entities) {
 
 ## File Changes Summary
 
-### New Files
-- `js/aframeSceneManager.js` - Core scene management
-- `js/aframeFactory.js` - Entity creation (all types)
-- `js/aframeAnimationManager.js` - Animation system
-- `js/aframeSelectionManager.js` - Selection handling
-- `js/aframeExporter.js` - Export functionality
+### New Files Created
+- `js/aframeSceneManager.js` - Core A-Frame scene management
+- `js/aframeFactory.js` - A-Frame entity factory
+- `assets/aframe/` - Directory with preloaded assets (audio, models)
 
 ### Modified Files
-- `index.html` - Add A-Frame libs, modify toolbar, overlay controls
-- `js/main.js` - Replace Three.js init with A-Frame
-- `js/ui.js` - Adapt properties panel for A-Frame entities
-- `js/layerManager.js` - Support A-Frame entities
-- `js/fileManager.js` - Add A-Frame export
+- `index.html` - Added A-Frame libs, toolbar menu, overlay controls, header buttons for save/load/export
+- `js/main.js` - Added A-Frame button handlers, keyboard shortcuts
+- `js/materialsManager.js` - Added mixin support
+- `js/layerManager.js` - Added A-Frame entity rendering
+- `js/fileManager.js` - Added save/load/export methods for A-Frame (saveScene, saveToBrowser, loadFromBrowser, exportAsAFrameHTML with ZIP support, generateAFrameHTML)
+- `js/ui.js` - Added event handlers for new buttons (export-json, export, load-browser), keyboard shortcuts
+- `js/historyManager.js` - Fixed ClearSceneCommand to clear both Three.js and A-Frame scenes
+- `css/styles.css` - Added A-Frame UI styling
+- `plans/aframe-conversion-plan.md` - Updated with completion status
 
-### Dependencies to Add
-- A-Frame 1.5.0+
-- A-Frame Extras
-- A-Frame Environment Component
-- Super Hands
-- A-Frame Physics System
-- JSZip (for export)
-- FileSaver.js
+### Dependencies Added
+- A-Frame 1.5.0
+- A-Frame Extras 7.2.0
+- A-Frame Environment Component 1.3.3
+- Super Hands 3.0.4
+- A-Frame Physics System v4.2.2
+- JSZip 3.10.1 (for ZIP export)
+- FileSaver.js (optional, for file downloads)
 
 ---
 
@@ -1978,9 +1981,9 @@ For model viewers:
 - [x] Save to browser localStorage with A-Frame support
 - [x] Load from browser localStorage
 - [x] Export scene as JSON file
-- [x] Export A-Frame HTML file
+- [x] Export A-Frame HTML file as ZIP
 - [x] Load scene from JSON file
-- [x] Added new header buttons (Load, Load from Browser, Save to Browser, Export JSON, Export A-Frame)
+- [x] Added new header buttons (Load, Load from Browser, Save to Browser, Export JSON, Export ZIP)
 - [x] Added keyboard shortcut Ctrl+Shift+L for loading from browser
 - [x] Fixed ClearSceneCommand to clear both Three.js and A-Frame scenes
 
@@ -1989,24 +1992,4 @@ For model viewers:
 - [ ] Test selection and properties panel sync
 - [ ] Test animation playback controls
 - [ ] Test VR mode entry/exit
-- [ ] Test export functionality
-
----
-
-## File Changes Summary
-
-### New Files Created
-- `js/aframeSceneManager.js` - Core A-Frame scene management
-- `js/aframeFactory.js` - A-Frame entity factory
-- `assets/aframe/` - Directory with preloaded assets (audio, models)
-
-### Modified Files
-- `index.html` - Added A-Frame libs, toolbar menu, overlay controls, header buttons for save/load/export
-- `js/main.js` - Added A-Frame button handlers, keyboard shortcuts
-- `js/materialsManager.js` - Added mixin support
-- `js/layerManager.js` - Added A-Frame entity rendering
-- `js/fileManager.js` - Added save/load/export methods for A-Frame (saveScene, saveToBrowser, loadFromBrowser, exportAsAFrameHTML, generateAFrameHTML)
-- `js/ui.js` - Added event handlers for new buttons (export-json, export, load-browser), keyboard shortcuts
-- `js/historyManager.js` - Fixed ClearSceneCommand to clear both Three.js and A-Frame scenes
-- `css/styles.css` - Added A-Frame UI styling
-- `plans/aframe-conversion-plan.md` - Updated with completion status
+- [ ] Test export functionality (ZIP download)

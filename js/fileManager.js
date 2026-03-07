@@ -275,7 +275,7 @@ export class FileManager {
         return localStorage.getItem('pixelAFrame-scene') !== null;
     }
 
-    // Export scene as A-Frame HTML file
+    // Export scene as A-Frame HTML file (zipped)
     exportAsAFrameHTML() {
         const aframeEntities = this.app.aframeManager?.getEntities() || [];
         
@@ -286,10 +286,76 @@ export class FileManager {
             return;
         }
 
-        // Generate the HTML content
-        const htmlContent = this.generateAFrameHTML(aframeEntities);
+        // Check if JSZip is available, load it if not
+        if (typeof JSZip === 'undefined') {
+            this.loadJSZip().then(() => {
+                this.doExportAsZip(aframeEntities);
+            }).catch(err => {
+                console.error('Failed to load JSZip:', err);
+                // Fallback to single HTML file
+                this.exportAsSingleHTML(aframeEntities);
+            });
+        } else {
+            this.doExportAsZip(aframeEntities);
+        }
+    }
+    
+    // Load JSZip from CDN
+    loadJSZip() {
+        return new Promise((resolve, reject) => {
+            if (typeof JSZip !== 'undefined') {
+                resolve();
+                return;
+            }
+            
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+    
+    // Do the actual ZIP export
+    doExportAsZip(entities) {
+        const zip = new JSZip();
         
-        // Create and trigger download
+        // Generate the HTML content
+        const htmlContent = this.generateAFrameHTML(entities);
+        
+        // Add index.html to zip
+        zip.file('index.html', htmlContent);
+        
+        // Create assets folder structure (empty for now - assets would need to be copied)
+        const assets = zip.folder('assets');
+        
+        // Create css folder with basic styles
+        const css = zip.folder('css');
+        css.file('style.css', this.generateExportStyles());
+        
+        // Create js folder
+        const js = zip.folder('js');
+        
+        // Generate the ZIP file
+        zip.generateAsync({type: 'blob'}).then(content => {
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'aframe-scene.zip';
+            a.click();
+            
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            
+            if (this.app.ui) {
+                this.app.ui.showNotification('A-Frame scene exported as ZIP!', 'success');
+            }
+        });
+    }
+    
+    // Fallback: export as single HTML file
+    exportAsSingleHTML(entities) {
+        const htmlContent = this.generateAFrameHTML(entities);
+        
         const blob = new Blob([htmlContent], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -302,6 +368,27 @@ export class FileManager {
         if (this.app.ui) {
             this.app.ui.showNotification('A-Frame scene exported!', 'success');
         }
+    }
+    
+    // Generate CSS for exported scene
+    generateExportStyles() {
+        return `/* A-Frame Scene Styles */
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.a-enter-vr-button {
+    bottom: 20px;
+    right: 20px;
+}
+
+/* Loading screen styles */
+.a-loader-overlay {
+    background: #1a1a1a;
+}
+`;
     }
 
     // Generate complete A-Frame HTML document
