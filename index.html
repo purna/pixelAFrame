@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel AFrame - Virtual Studio</title>
+    <!-- Fonts & Icons -->
+    <link rel="icon" type="image/png" href="/pixel3d/favicon-96x96.png" sizes="96x96" />
+     <!-- Google Fonts - Press Start 2P -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <!-- Custom Font -->
+    <style>
+        @font-face {
+            font-family: 'Inter';
+            src: url('fonts/inter-normal.woff2') format('woff2');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Inter';
+            src: url('fonts/inter-bold.woff2') format('woff2');
+            font-weight: bold;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Press Start 2P';
+            src: local('Press Start 2P'), url('https://fonts.gstatic.com/s/pressstart2p/v14/e3t4euO8T-267oIAQAu6jDQy17_1n7WQ.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+    </style>
+    <!-- External Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/settings.css">
+    <link rel="stylesheet" href="css/modal.css">
+    <link rel="stylesheet" href="css/tutorials.css">
+
+    <!-- Local Font Awesome Implementation - No fallbacks needed -->
+    <link rel="stylesheet" href="fonts/fontawesome-free-6.5.0/css/all.min.css">
+
+    <!-- Three.js Import Map -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    
+    <!-- A-Frame VR Library -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    
+    <!-- A-Frame Extras (animation-mixer, controls) -->
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.2.0/dist/aframe-extras.min.js"></script>
+    
+    <!-- A-Frame Environment Component -->
+    <script src="https://unpkg.com/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="logo-area">
+            <h1>Pixel AFrame</h1>
+            <span class="badge">Pro Virtual Studio V1.0</span>
+        </div>
+        <div class="header-controls">
+            <button id="undoBtn" class="btn icon-only" title="Undo (Ctrl+Z)"><i class="fas fa-undo"></i></button>
+            <button id="redoBtn" class="btn icon-only" title="Redo (Ctrl+Y)"><i class="fas fa-redo"></i></button>
+            <div class="separator" style="height: 20px; width: 1px; margin: 0 10px;"></div>
+            <button class="btn" id="btn-aframe-mode" title="A-Frame Mode"><i class="fas fa-vr-cardboard"></i> A-Frame</button>
+            <button class="btn" id="btn-enter-vr" title="Enter VR (F5)"><i class="fas fa-vr-cardboard"></i> VR</button>
+            <button class="btn" id="btn-enter-ar" title="Enter AR"><i class="fas fa-mobile-alt"></i> AR</button>
+            <div class="separator" style="height: 20px; width: 1px; margin: 0 10px;"></div>
+            <button class="btn" id="btn-clear"><i class="fas fa-trash-alt"></i> Clear</button>
+            <input type="file" id="file-input" accept=".json" style="display:none">
+            <button class="btn" id="btn-load"><i class="fas fa-folder-open"></i> Load</button>
+            <button class="btn" id="btn-load-browser"><i class="fas fa-cloud-upload-alt"></i> Load from Browser</button>
+            <button class="btn primary" id="btn-save"><i class="fas fa-save"></i> Save to Browser</button>
+            <button class="btn" id="btn-export-json"><i class="fas fa-file-code"></i> Export JSON</button>
+            <button class="btn" id="btn-export"><i class="fas fa-download"></i> Export A-Frame</button>
+        </div>
+    </header>
+
+    <!-- WORKSPACE -->
+    <div class="workspace">
+
+        <!-- LEFT TOOLBAR -->
+        <div class="tools-panel" id="tools-container">
+            <div class="tool-btn active" id="tool-select" data-tooltip="**Select Tool**
+Click objects to select them
+--Keyboard: Q--
+--Delete: X--"><i class="fas fa-mouse-pointer"></i></div>
+            <div class="tool-divider"></div>
+
+            <!-- AI Tools -->
+            <div class="tool-btn ai-tool" id="tool-ai-scene" data-tooltip="**Magic Scene Generator**
+Describe a scene and let AI create it
+Uses Gemini AI for generation"><i class="fas fa-wand-magic-sparkles"></i></div>
+
+            <div class="tool-divider"></div>
+
+            <!-- Shapes Menu -->
+            <div class="tool-btn menu-parent" data-tooltip="**Shapes**
+Hover to see all available shapes">
+                <i class="fas fa-shapes"></i>
+                <div class="tool-submenu">
+                    <div class="tool-btn" data-action="addShape" data-type="box" data-tooltip="**Box**"><i
+                            class="fas fa-cube"></i></div>
+                    <div class="tool-btn" data-action="addShape" data-type="sphere" data-tooltip="**Sphere**"><i
+                            class="fas fa-circle"></i></div>
+                    <div class="tool-btn" data-action="addShape" data-type="cone" data-tooltip="**Cone**"><i
+                            class="fas fa-caret-up"></i></div>
+                    <div class="tool-btn" data-action="addShape" data-type="cylinder" data-tooltip="**Cylinder**"><i
+                            class="fas fa-database"></i></div>
+                    <div class="tool-btn" data-action="addShape" data-type="plane" data-tooltip="**Plane**
+Great for floors"><i class="fas fa-vector-square"></i></div>
+                    <div class="tool-btn" data-action="addShape" data-type="torus" data-tooltip="**Torus**
+Donut shape"><i class="fas fa-life-ring"></i></div>
+                    <!---
+                    <div class="tool-btn" data-action="addShape" data-type="tetrahedron" data-tooltip="**Tetrahedron**">
+                        <i class="fas fa-gem"></i>
+                    </div>
+                    <div class="tool-btn" data-action="addShape" data-type="octahedron" data-tooltip="**Octahedron**"><i
+                            class="fas fa-dice-d8"></i></div>
+                    <div class="tool-btn" data-action="addShape" data-type="dodecahedron"
+                        data-tooltip="**Dodecahedron**"><i class="fas fa-dice-d20"></i></div>
+                    <div class="tool-btn" data-action="addShape" data-type="icosahedron" data-tooltip="**Icosahedron**">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="tool-btn" data-action="addShape" data-type="torusknot" data-tooltip="**Torus Knot**
+Complex twisted shape"><i class="fas fa-bezier-curve"></i></div>
+
+                -->
+                </div>
+            </div>
+
+
+            <!-- Lights Menu -->
+            <div class="tool-btn menu-parent" data-tooltip="**Lights**
+Illuminate your scene">
+                <i class="fas fa-lightbulb"></i>
+                <div class="tool-submenu">
+                    <div class="tool-btn" data-action="addLight" data-type="point" data-tooltip="**Point Light**
+Radiates in all directions"><i class="far fa-lightbulb"></i></div>
+                    <div class="tool-btn" data-action="addLight" data-type="spot" data-tooltip="**Spot Light**
+Focused beam of light"><i class="fas fa-bullseye"></i></div>
+                    <div class="tool-btn" data-action="addLight" data-type="directional" data-tooltip="**Directional Light**
+Like sunlight, parallel rays"><i class="fas fa-sun"></i></div>
+                    <div class="tool-btn" data-action="addLight" data-type="ambient" data-tooltip="**Ambient Light**
+Overall scene lighting"><i class="fas fa-globe"></i></div>
+                    <div class="tool-btn" data-action="addLight" data-type="hemisphere" data-tooltip="**Hemisphere Light**
+Sky and ground lighting"><i class="fas fa-adjust"></i></div>
+                </div>
+            </div>
+
+            <!-- Separators to group functionality -->
+            <div class="tool-divider"></div>
+
+            <!-- Materials Tool -->
+            <div class="tool-btn materials-tool" id="tool-materials" data-tooltip="**Materials**
+            View and manage materials"><i class="fas fa-palette"></i></div>
+
+            <!-- Scene Settings Tool -->
+            <div class="tool-btn scene-settings-tool" id="tool-scene-settings" data-tooltip="**Scene Settings**
+            Configure background, lighting, and export options"><i class="fas fa-image"></i></div>
+
+            <!-- Camera controls will be added here dynamically -->
+            <div id="camera-controls-container"></div>
+
+            <!-- Overlay Toggle Button -->
+            <div class="tool-btn overlay-toggle-btn" id="tool-toggle-overlays" data-tooltip="**Toggle Overlays**
+            Show/Hide all visual aids (Grid, Axes, Helpers)
+            --Keyboard: Ctrl+Shift+O--"><i class="fas fa-eye-slash"></i></div>
+
+            <!-- Settings at bottom -->
+            <div style="margin-top: auto;"></div>
+            <div class="tool-divider"></div>
+            
+            <!-- A-Frame Elements Menu -->
+            <div class="tool-btn menu-parent" data-tooltip="**A-Frame Elements**
+Add VR-ready elements">
+                <i class="fas fa-vr-cardboard"></i>
+                <div class="tool-submenu">
+                    <!-- Primitives -->
+                    <div class="tool-submenu-category">Primitives</div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="box" data-tooltip="**Box**"><i class="fas fa-cube"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="sphere" data-tooltip="**Sphere**"><i class="fas fa-circle"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="cylinder" data-tooltip="**Cylinder**"><i class="fas fa-database"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="cone" data-tooltip="**Cone**"><i class="fas fa-caret-up"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="plane" data-tooltip="**Plane**"><i class="fas fa-vector-square"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="torus" data-tooltip="**Torus**"><i class="fas fa-life-ring"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="torus-knot" data-tooltip="**Torus Knot**"><i class="fas fa-bezier-curve"></i></div>
+                    
+                    <!-- Media -->
+                    <div class="tool-submenu-category">Media</div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="image" data-tooltip="**Image**"><i class="fas fa-image"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="video" data-tooltip="**Video**"><i class="fas fa-video"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="sky" data-tooltip="**360 Sky**"><i class="fas fa-cloud"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="sound" data-tooltip="**Sound**"><i class="fas fa-volume-up"></i></div>
+                    
+                    <!-- Text & UI -->
+                    <div class="tool-submenu-category">Text & UI</div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="text" data-tooltip="**Text**"><i class="fas fa-font"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="cursor" data-tooltip="**Cursor**"><i class="fas fa-crosshairs"></i></div>
+                    
+                    <!-- Models -->
+                    <div class="tool-submenu-category">Models</div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="gltf-model" data-tooltip="**GLTF Model**"><i class="fas fa-cubes"></i></div>
+                    
+                    <!-- Environment -->
+                    <div class="tool-submenu-category">Environment</div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="environment" data-tooltip="**Environment**"><i class="fas fa-globe"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="light" data-tooltip="**Light**"><i class="fas fa-lightbulb"></i></div>
+                    
+                    <!-- Assets (Preloaded) -->
+                    <div class="tool-submenu-category">Assets (Preloaded)</div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="xbot" data-tooltip="**Xbot Character**"><i class="fas fa-female"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="ybot" data-tooltip="**Ybot Character**"><i class="fas fa-male"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="tree1" data-tooltip="**Tree 1**"><i class="fas fa-tree"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="tree2" data-tooltip="**Tree 2**"><i class="fas fa-tree"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="table" data-tooltip="**Table**"><i class="fas fa-chair"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="engine" data-tooltip="**Engine**"><i class="fas fa-cog"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="blip1" data-tooltip="**Blip Sound 1**"><i class="fas fa-volume-up"></i></div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="blip2" data-tooltip="**Blip Sound 2**"><i class="fas fa-volume-up"></i></div>
+                    
+                    <!-- Advanced -->
+                    <div class="tool-submenu-category">Advanced</div>
+                    <div class="tool-btn" data-action="addAFrameElement" data-type="entity" data-tooltip="**Generic Entity**"><i class="fas fa-cube"></i></div>
+                </div>
+            </div>
+            
+            <div class="tool-btn" id="tool-settings" data-tooltip="**Settings**
+            Configure application"><i class="fas fa-cog"></i></div>
+        </div>
+
+
+        <!-- CENTER CANVAS -->
+        <div class="canvas-area">
+            <div class="overlay-controls">
+                <button class="btn icon-only" id="mode-hand" title="Hand Tool (H)" data-tooltip="**Hand Tool**
+                Pan around the scene
+                --Keyboard: H--"><i class="fas fa-hand-paper"></i></button>
+                <button class="btn icon-only" id="mode-translate" title="Translate (G)" data-tooltip="**Translate Mode**
+                Move objects in 3D space
+                --Keyboard: G--"><i class="fas fa-arrows-alt"></i></button>
+                <button class="btn icon-only" id="mode-rotate" title="Rotate (R)" data-tooltip="**Rotate Mode**
+                Rotate objects around axes
+                --Keyboard: R--"><i class="fas fa-sync-alt"></i></button>
+                <button class="btn icon-only" id="mode-scale" title="Scale (S)" data-tooltip="**Scale Mode**
+                Resize objects
+                --Keyboard: S--"><i class="fas fa-expand-arrows-alt"></i></button>
+           
+
+            <!-- Transform Space Toggle -->
+            <label class="transform-space-toggle" title="Toggle Transform Space">
+                <input type="checkbox" id="transform-space-checkbox" class="Checkbox" checked>
+                <span class="toggle-label">Local</span>
+            </label>
+            
+            <!-- A-Frame Playback Controls -->
+            <div class="aframe-playback-controls">
+                <button class="btn icon-only" id="btn-aframe-play" title="Play Animations (F8)" data-tooltip="**Play Animations**
+                Play A-Frame object animations
+                --Keyboard: F8--"><i class="fas fa-play"></i></button>
+                <button class="btn icon-only" id="btn-aframe-stop" title="Stop Animations" data-tooltip="**Stop Animations**
+                Stop all A-Frame animations
+                --Keyboard: F9--"><i class="fas fa-stop"></i></button>
+            </div>
+             </div>
+
+            <!-- Zoom Control -->
+            <div class="zoom-control">
+                <button class="btn icon-only" id="zoom-out" title="Zoom Out (-)" data-tooltip="**Zoom Out**
+                Move camera away from scene
+                --Keyboard: ---"><i class="fas fa-search-minus"></i></button>
+                <input type="range" id="zoom-slider" min="1" max="100" value="50" class="zoom-slider">
+                <button class="btn icon-only" id="zoom-in" title="Zoom In (+)" data-tooltip="**Zoom In**
+                Move camera closer to scene
+                --Keyboard: +--"><i class="fas fa-search-plus"></i></button>
+            </div>
+            <div id="canvas-container" style="width: 100%; height: 100%;"></div>
+            
+            <!-- A-Frame Scene (hidden by default, shown in A-Frame mode) -->
+            <a-scene id="aframe-scene" embedded style="display: none;">
+                <a-assets>
+                    <a-mixin id="default-material" material="color: #4CC3D9; metalness: 0.3; roughness: 0.5"></a-mixin>
+                </a-assets>
+                <a-entity id="aframe-scene-root"></a-entity>
+                <a-sky color="#1a1a2e"></a-sky>
+                <a-entity id="aframe-camera-rig" position="0 1.6 5">
+                    <a-camera look-controls wasd-controls>
+                        <a-cursor color="#00d9ff" fuse="false"></a-cursor>
+                    </a-camera>
+                </a-entity>
+                <a-light type="ambient" color="#ffffff" intensity="0.6"></a-light>
+                <a-light type="directional" color="#ffffff" intensity="1.2" position="10 10 5"></a-light>
+            </a-scene>
+            
+            <!-- Deselect Info Box -->
+            <div id="deselect-info" class="deselect-info" style="display: none;">
+                <i class="fas fa-info-circle"></i> Right-click empty space to deselect
+            </div>
+        </div>
+
+        <!-- Floating Toggle -->
+        <div id="panel-toggle" title="Toggle Panel">
+            <i class="fas fa-chevron-right"></i>
+        </div>
+
+        <!-- RIGHT PANEL - Combined Scene Objects and Properties -->
+        <div class="right-panel" id="right-panel">
+            <!-- Scene Objects Section -->
+            <div class="panel-header">
+                <div class="panel-header-title"><i class="fas fa-layer-group"></i> Scene Objects</div>
+            </div>
+
+            <!-- LAYERS LIST (Managed by LayerManager.js) -->
+            <div id="layers-list" class="layers-container">
+                <!-- Layer items will be injected here dynamically -->
+            </div>
+
+            <!-- Properties Section -->
+            <div class="panel-header" style="border-top:1px solid var(--border-color);">
+                <div class="panel-header-title"><i class="fas fa-sliders-h"></i> Properties</div>
+            </div>
+            <div id="props-content" class="panel-content">
+                <div class="empty-state">
+                    <p>Click on an object to edit properties</p>
+                    <br>
+                    <p>Right click to deselect an object</p>
+               </div>
+            </div>
+
+            <!-- Materials Section (hidden by default) -->
+            <div id="materials-section" class="materials-section" style="display: none;">
+                <div class="panel-header" style="border-top:1px solid var(--border-color);">
+                    <div class="panel-header-title"><i class="fas fa-palette"></i> Materials</div>
+                </div>
+                <div id="materials-content" class="panel-content">
+                    <div class="empty-state">No materials created yet</div>
+                </div>
+            </div>
+
+            <!-- Scene Section (hidden by default) -->
+            <div id="scene-section" class="scene-section" style="display: none;">
+                <div class="panel-header" style="border-top:1px solid var(--border-color);">
+                    <div class="panel-header-title"><i class="fas fa-image"></i> Scene Export</div>
+                </div>
+                <div id="scene-content" class="panel-content">
+                    <!-- Export Settings -->
+                    <div class="property-group">
+                        <div class="property-label">Export Settings</div>
+
+                        <!-- Canvas Size Controls -->
+                        <div class="property-group">
+                            <div class="property-label">Canvas Size</div>
+                            <select id="export-resolution"
+                                style="background: var(--bg-light); border: 1px solid var(--border-color); border-radius: 4px; padding: 6px 10px; font-size: 0.8rem; color: var(--text-primary); width: 100%; margin-top: 6px;">
+                                <!-- Game Asset Sizes -->
+                                <option value="24x24">24×24 - Game Icon</option>
+                                <option value="36x36">36×36 - Game Icon</option>
+                                <option value="48x48">48×48 - Game Icon</option>
+                                <option value="128x128">128×128 - Game Sprite</option>
+                                <option value="512x512">512×512 - Game Texture</option>
+                                <option value="1024x1024">1024×1024 - High-res Texture</option>
+
+                                <!-- Standard Resolutions -->
+                                <option value="1920x1080" selected>1920×1080 - Full HD</option>
+                                <option value="2560x1440">2560×1440 - 2K</option>
+                                <option value="3840x2160">3840×2160 - 4K</option>
+                                <option value="custom">Custom Size</option>
+                            </select>
+                        </div>
+
+                        <!-- Camera Border Toggle -->
+                        <div class="property-group">
+                            <label class="property-label">
+                                <input type="checkbox" id="show-camera-border" checked>
+                                Show Camera Border
+                            </label>
+                        </div>
+
+                        <!-- Custom Resolution Group (hidden by default) -->
+                        <div class="property-group" id="custom-resolution-group" style="display: none;">
+                            <label class="property-label">
+                                Custom Width:
+                                <input type="number" id="export-width" value="1920" min="100" max="8000">
+                            </label>
+                            <label class="property-label">
+                                Custom Height:
+                                <input type="number" id="export-height" value="1080" min="100" max="8000">
+                            </label>
+                        </div>
+
+                        <!-- Export Button -->
+                        <button class="btn primary" id="btn-export-png" style="width: 100%; margin-top: 10px;">
+                            <i class="fas fa-download"></i> Export as PNG
+                        </button>
+                    </div>
+
+                    <!-- Camera Border Visualization -->
+                    <div class="property-group">
+                        <div class="property-label">Camera Border Preview</div>
+                        <div id="camera-border-preview"
+                            style="width: 100%; height: 200px; background: rgba(0, 217, 255, 0.1); border: 1px dashed var(--accent-tertiary); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 0.8rem; cursor: move;">
+                            Camera border visualization will appear here
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- AI MODAL -->
+    <div class="modal-overlay" id="ai-modal">
+        <div class="modal">
+            <div class="modal-title">
+                <i class="fas fa-sparkles"></i> <span id="modal-title-text">Magic Scene Generator</span>
+            </div>
+            <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:10px;" id="modal-desc">
+                Describe the scene you want to build.
+            </div>
+            <textarea id="ai-prompt-input"
+                placeholder="e.g. A circle of blue boxes with a red sphere in the middle..."></textarea>
+            <div class="modal-actions">
+                <div class="loading-spinner" id="ai-spinner"><i class="fas fa-circle-notch fa-spin"></i> Generating...
+                </div>
+                <button class="btn" id="btn-ai-cancel">Cancel</button>
+                <button class="btn ai-magic" id="btn-ai-generate">Generate ✨</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- UNIFIED SETTINGS MODAL -->
+    <div class="modal-overlay" id="unified-settings-modal">
+        <div class="modal">
+            <header>
+                <div class="modal-title">
+                    <i class="fas fa-cog"></i> Settings
+                </div>
+                <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:15px;">
+                    Configure your 3D Studio preferences
+                </div>
+
+                <!-- Settings Tabs -->
+                <div class="settings-tabs">
+                    <button class="settings-tab active" data-tab="general" id="tab-general">
+                        <i class="fas fa-sliders-h"></i> General
+                    </button>
+                    <button class="settings-tab" data-tab="scene" id="tab-scene">
+                        <i class="fas fa-image"></i> Scene
+                    </button>
+                    <button class="settings-tab" data-tab="export" id="tab-export">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                    <button class="settings-tab" data-tab="tutorial" id="tab-tutorial">
+                        <i class="fas fa-graduation-cap"></i> Tutorial
+                    </button>
+                </div>
+            </header>
+            <!-- Scrollable Content Wrapper -->
+            <div class="modal-content-wrapper">
+                <!-- General Settings Tab -->
+                <div class="settings-tab-content active" data-tab-content="general">
+                    <div class="settings-content">
+                        <!-- Visual Settings Group -->
+                        <div class="settings-section">
+                            <div class="section-heading">Visual Settings</div>
+                            <div class="property-group">
+                                <label class="property-label">
+                                    <input type="checkbox" id="setting-grid" checked>
+                                    Show Grid
+                                </label>
+                            </div>
+                            <div class="property-group">
+                                <label class="property-label">
+                                    <input type="checkbox" id="setting-axes" checked>
+                                    Show Axes
+                                </label>
+                            </div>
+                            <div class="property-group">
+                                <label class="property-label">
+                                    <input type="checkbox" id="setting-snap" checked>
+                                    Snap to Grid
+                                </label>
+                            </div>
+                            <div class="property-group">
+                                <label class="property-label">
+                                    <input type="checkbox" id="setting-tooltips" checked>
+                                    Show Tooltips
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Camera Settings Group -->
+                        <div class="settings-section">
+                            <div class="section-heading">Camera Settings</div>
+                            <div class="property-group has-slider">
+                                <label class="property-label">
+                                    Camera Speed: <span id="camera-speed-value">1.0</span>
+                                </label>
+                                <input type="range" id="setting-camera-speed" min="0.1" max="5" step="0.1" value="1">
+                            </div>
+                        </div>
+
+                        <!-- Auto Save Settings Group -->
+                        <div class="settings-section">
+                            <div class="section-heading">Auto Save Settings</div>
+                            <div class="property-group">
+                                <label class="property-label">
+                                    <input type="checkbox" id="setting-autosave" checked>
+                                    Auto Save Scene
+                                </label>
+                            </div>
+                            <div class="property-group has-slider">
+                                <label class="property-label">
+                                    Auto Save Interval (minutes): <span id="autosave-interval-value">5</span>
+                                </label>
+                                <input type="range" id="setting-autosave-interval" min="1" max="60" step="1" value="5">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scene Settings Tab -->
+                <div class="settings-tab-content" data-tab-content="scene">
+                    <div class="scene-settings-content">
+                        <!-- Background Settings Group -->
+                        <div class="settings-section">
+                            <div class="section-heading">Background Settings</div>
+                            <div class="property-group">
+                                <label class="property-label">
+                                    <input type="checkbox" id="setting-background-enabled" checked>
+                                    Enable Custom Background
+                                </label>
+
+                                <label class="property-label">
+                                    Background Color:
+                                    <input type="color" id="setting-background-color" value="#1a1a2e">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Lighting Settings Group -->
+                        <div class="settings-section">
+                            <div class="section-heading">Lighting Settings</div>
+                            <div class="property-group">
+                                <label class="property-label">
+                                    <input type="checkbox" id="setting-ambient-light" checked>
+                                    Enable Ambient Light
+                                </label>
+                            </div>
+                            <div class="property-group">
+                                <label class="property-label">
+                                    Ambient Light Color:
+                                    <input type="color" id="setting-ambient-color" value="#ffffff">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Settings Tab -->
+                <div class="settings-tab-content" data-tab-content="export">
+                    <div class="export-settings-content">
+                        <!-- Export Options Group -->
+                        <div class="settings-section">
+                            <div class="section-heading">Export Options</div>
+                            <div class="property-group">
+                                <label class="property-label">
+                                    <input type="checkbox" id="setting-export-transparent" checked>
+                                    Export with Transparent Background
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Resolution Settings Group -->
+                        <div class="settings-section">
+                            <div class="section-heading">Resolution Settings</div>
+                            <div class="property-group">
+                                <label class="property-label">
+                                    Export Resolution:
+                                    <select id="setting-export-resolution"
+                                        style="background: var(--bg-light); border: 1px solid var(--border-color); border-radius: 4px; padding: 6px 10px; font-size: 0.8rem; color: var(--text-primary); width: 100%; margin-top: 6px;">
+                                        <!-- Game Asset Sizes -->
+                                        <option value="24x24">24×24 - Game Icon</option>
+                                        <option value="36x36">36×36 - Game Icon</option>
+                                        <option value="48x48">48×48 - Game Icon</option>
+                                        <option value="128x128">128×128 - Game Sprite</option>
+                                        <option value="512x512">512×512 - Game Texture</option>
+                                        <option value="1024x1024">1024×1024 - High-res Texture</option>
+
+                                        <!-- Standard Resolutions -->
+                                        <option value="1920x1080">1920×1080 - Full HD</option>
+                                        <option value="2560x1440">2560×1440 - 2K</option>
+                                        <option value="3840x2160">3840×2160 - 4K</option>
+                                        <option value="custom">Custom Size</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <div class="property-group" id="custom-resolution-group" style="display: none;">
+                                <label class="property-label">
+                                    Custom Width:
+                                    <input type="number" id="setting-custom-width" value="1920" min="100" max="8000">
+                                </label>
+                                <label class="property-label">
+                                    Custom Height:
+                                    <input type="number" id="setting-custom-height" value="1080" min="100" max="8000">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tutorial Settings Tab -->
+                <div class="settings-tab-content" data-tab-content="tutorial">
+                    <div class="settings-content">
+                        <!-- Tutorial Settings Group -->
+                        <div class="settings-section">
+                            <div class="section-heading">Tutorial Settings</div>
+                            <div class="property-group">
+                                <label class="setting-label">
+                                    <input type="checkbox" id="settings-enable-tutorials" checked>
+                                    <span class="checkmark"></span> Enable Tutorials
+                                </label>
+                                <div class="setting-description">
+                                    Show interactive tutorials on startup
+                                </div>
+                            </div>
+
+                            <div class="property-group">
+                                <label class="setting-label">
+                                    <input type="checkbox" id="settings-show-hints" checked>
+                                    <span class="checkmark"></span> Show Tutorial Hints
+                                </label>
+                                <div class="setting-description">
+                                    Display helpful hints and tooltips
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tutorial Actions Group -->
+                        <div class="settings-section">
+                            <div class="section-heading">Tutorial Actions</div>
+                            <div class="property-group">
+                                <button id="startTutorialBtn" class="btn" style="width: 100%;">
+                                    <i class="fas fa-graduation-cap"></i> Start Tutorial
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <footer>
+                <div class="modal-actions">
+                    <button class="btn" id="btn-settings-reset">Reset</button>
+                    <button class="btn" id="btn-settings-close">Close</button>
+                    <button class="btn primary" id="btn-settings-save">Save Settings</button>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- MAIN APP ENTRY POINT -->
+    <script type="module" src="js/main.js"></script>
+
+</html>

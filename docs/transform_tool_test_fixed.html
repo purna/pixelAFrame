@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transform Tool Fix Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-title {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #00d4ff;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            background: #333;
+        }
+        .pass {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+        }
+        .fail {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid #ff0000;
+            color: #ff0000;
+        }
+        .info {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid #00d4ff;
+            color: #00d4ff;
+        }
+        button {
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #00a8cc;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #444;
+            border-radius: 8px;
+        }
+        .console-log {
+            background: #000;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .instructions {
+            background: rgba(255, 165, 0, 0.1);
+            border: 1px solid #ffa500;
+            color: #ffa500;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Transform Tool Fix Test</h1>
+        
+        <div class="test-section">
+            <div class="test-title">Manual Testing Instructions</div>
+            <div class="instructions">
+                <p><strong>Please test these transform tool scenarios manually:</strong></p>
+                <ol>
+                    <li><strong>Object Selection:</strong> Click on the red box, blue sphere, or green cylinder. They should select and show transform controls.</li>
+                    <li><strong>Transform Mode Switching:</strong> Click translate, rotate, and scale buttons. The transform controls should change accordingly.</li>
+                    <li><strong>XYZ Axis Movement:</strong> In translate mode, click and drag the colored arrows (X=red, Y=green, Z=blue) to move objects along that axis.</li>
+                    <li><strong>Object Deselection:</strong> Click on empty space. The object should be deselected and transform controls should disappear.</li>
+                    <li><strong>Hand Tool:</strong> Press H key or click hand tool. Should enable panning without transform controls.</li>
+                    <li><strong>Transform Control Interaction:</strong> Click directly on transform control arrows/handles. Should move the object along that axis.</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Automated Tests</div>
+            <button onclick="testTransformInitialization()">Test Transform Control Initialization</button>
+            <button onclick="testObjectSelection()">Test Object Selection</button>
+            <button onclick="testTransformModes()">Test Transform Mode Switching</button>
+            <button onclick="testObjectDeselection()">Test Object Deselection</button>
+            <div id="test-results"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Application View</div>
+            <iframe id="app-frame" src="index.html"></iframe>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Console Log</div>
+            <div id="console-log" class="console-log"></div>
+            <button onclick="clearConsole()">Clear Console</button>
+        </div>
+    </div>
+
+    <script>
+        // Capture console logs and errors
+        const originalLog = console.log;
+        const originalError = console.error;
+        const consoleLog = document.getElementById('console-log');
+        let errorCount = 0;
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+            ).join(' ');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[LOG] ${message}`;
+            consoleLog.appendChild(logEntry);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+            ).join(' ');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[ERROR] ${message}`;
+            logEntry.style.color = '#ff0000';
+            consoleLog.appendChild(logEntry);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+            errorCount++;
+        };
+
+        function clearConsole() {
+            consoleLog.innerHTML = '';
+            errorCount = 0;
+        }
+
+        function logResult(message, type) {
+            const resultsDiv = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.textContent = message;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function testTransformInitialization() {
+            try {
+                const frame = document.getElementById('app-frame');
+                setTimeout(() => {
+                    try {
+                        const frameDoc = frame.contentDocument || frame.contentWindow.document;
+                        
+                        // Check if transform controls are initialized
+                        if (frame.contentWindow.app && frame.contentWindow.app.transformControl) {
+                            const transformControl = frame.contentWindow.app.transformControl;
+                            logResult('✓ Transform controls initialized', 'pass');
+                            logResult(`Transform control mode: ${transformControl.mode}`, 'info');
+                            logResult(`Transform control visible: ${transformControl.visible}`, 'info');
+                            logResult(`Transform control size: ${transformControl.size}`, 'info');
+                        } else {
+                            logResult('✗ Transform controls not initialized', 'fail');
+                        }
+                    } catch (error) {
+                        logResult(`✗ Error accessing frame: ${error.message}`, 'fail');
+                    }
+                }, 2000);
+            } catch (error) {
+                logResult(`✗ Error testing transform initialization: ${error.message}`, 'fail');
+            }
+        }
+
+        function testObjectSelection() {
+            try {
+                const frame = document.getElementById('app-frame');
+                setTimeout(() => {
+                    try {
+                        const frameDoc = frame.contentDocument || frame.contentWindow.document;
+                        
+                        // Look for objects in the scene
+                        const sceneObjectsPanel = frameDoc.querySelector('.scene-objects');
+                        if (sceneObjectsPanel) {
+                            const shapeItems = sceneObjectsPanel.querySelectorAll('[data-type="shape"]');
+                            if (shapeItems.length > 0) {
+                                logResult(`✓ Found ${shapeItems.length} shape objects for testing`, 'pass');
+                                
+                                // Try to click on the first shape object
+                                const firstShape = shapeItems[0];
+                                firstShape.click();
+                                setTimeout(() => {
+                                    logResult('✓ Object selection test triggered', 'pass');
+                                }, 500);
+                            } else {
+                                logResult('⚠ No shape objects found for testing', 'info');
+                            }
+                        } else {
+                            logResult('✗ Scene objects panel not found', 'fail');
+                        }
+                    } catch (error) {
+                        logResult(`✗ Error testing object selection: ${error.message}`, 'fail');
+                    }
+                }, 2000);
+            } catch (error) {
+                logResult(`✗ Error accessing frame: ${error.message}`, 'fail');
+            }
+        }
+
+        function testTransformModes() {
+            try {
+                const frame = document.getElementById('app-frame');
+                setTimeout(() => {
+                    try {
+                        const frameDoc = frame.contentDocument || frame.contentWindow.document;
+                        
+                        // Look for transform mode buttons
+                        const translateBtn = frameDoc.querySelector('[data-mode="translate"]');
+                        const rotateBtn = frameDoc.querySelector('[data-mode="rotate"]');
+                        const scaleBtn = frameDoc.querySelector('[data-mode="scale"]');
+                        
+                        if (translateBtn && rotateBtn && scaleBtn) {
+                            logResult('✓ Transform mode buttons found', 'pass');
+                            
+                            // Test switching to rotate mode
+                            rotateBtn.click();
+                            setTimeout(() => {
+                                logResult('✓ Rotate mode switch test triggered', 'pass');
+                                
+                                // Test switching to scale mode
+                                scaleBtn.click();
+                                setTimeout(() => {
+                                    logResult('✓ Scale mode switch test triggered', 'pass');
+                                    
+                                    // Test switching back to translate mode
+                                    translateBtn.click();
+                                    setTimeout(() => {
+                                        logResult('✓ Translate mode switch test triggered', 'pass');
+                                    }, 300);
+                                }, 300);
+                            }, 300);
+                        } else {
+                            logResult('✗ Transform mode buttons not found', 'fail');
+                        }
+                    } catch (error) {
+                        logResult(`✗ Error testing transform modes: ${error.message}`, 'fail');
+                    }
+                }, 2000);
+            } catch (error) {
+                logResult(`✗ Error accessing frame: ${error.message}`, 'fail');
+            }
+        }
+
+        function testObjectDeselection() {
+            try {
+                const frame = document.getElementById('app-frame');
+                setTimeout(() => {
+                    try {
+                        const frameDoc = frame.contentDocument || frame.contentWindow.document;
+                        
+                        // Try to click on an empty area of the canvas
+                        const canvas = frameDoc.querySelector('#canvas-container canvas');
+                        if (canvas) {
+                            logResult('✓ Canvas found for deselection test', 'pass');
+                            logResult('⚠ Manual test required: Click on empty space to deselect objects', 'info');
+                        } else {
+                            logResult('✗ Canvas not found', 'fail');
+                        }
+                    } catch (error) {
+                        logResult(`✗ Error testing object deselection: ${error.message}`, 'fail');
+                    }
+                }, 2000);
+            } catch (error) {
+                logResult(`✗ Error accessing frame: ${error.message}`, 'fail');
+            }
+        }
+
+        // Auto-start testing
+        document.addEventListener('DOMContentLoaded', () => {
+            logResult('Ready to test transform tool fixes. Use manual testing instructions above and automated tests.', 'info');
+        });
+    </script>
+</body>
+</html>

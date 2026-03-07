@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Final Fix Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-title {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #00d4ff;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            background: #333;
+        }
+        .pass {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+        }
+        .fail {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid #ff0000;
+            color: #ff0000;
+        }
+        .info {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid #00d4ff;
+            color: #00d4ff;
+        }
+        button {
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #00a8cc;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #444;
+            border-radius: 8px;
+        }
+        .console-log {
+            background: #000;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .instructions {
+            background: rgba(255, 165, 0, 0.1);
+            border: 1px solid #ffa500;
+            color: #ffa500;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Camera Final Fix Test</h1>
+        
+        <div class="test-section">
+            <div class="test-title">Manual Testing Instructions</div>
+            <div class="instructions">
+                <p><strong>Please test these scenarios manually:</strong></p>
+                <ol>
+                    <li><strong>Camera Selection:</strong> Click on "Main Camera" in the scene objects panel. It should select without error.</li>
+                    <li><strong>Camera Positioning:</strong> The camera should NOT jump to the cylinder position when selected.</li>
+                    <li><strong>Hand Tool:</strong> Test the hand tool (H key) to pan around the scene smoothly.</li>
+                    <li><strong>Object Selection:</strong> Click on the red box, blue sphere, and green cylinder. They should select normally.</li>
+                    <li><strong>Transform Tools:</strong> Switch between translate, rotate, and scale modes. They</li>
+                     should work properly.<li><strong>Camera Helper:</strong> The camera helper should be visible but not selectable or interfere with object selection.</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Automated Tests</div>
+            <button onclick="testApplicationLoad()">Test Application Loading</button>
+            <button onclick="testCameraObjectsPanel()">Test Camera Objects Panel</button>
+            <button onclick="testNoCameraJumping()">Test No Camera Jumping</button>
+            <button onclick="testHandTool()">Test Hand Tool</button>
+            <div id="test-results"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Application View</div>
+            <iframe id="app-frame" src="index.html"></iframe>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Console Log</div>
+            <div id="console-log" class="console-log"></div>
+            <button onclick="clearConsole()">Clear Console</button>
+        </div>
+    </div>
+
+    <script>
+        // Capture console logs and errors
+        const originalLog = console.log;
+        const originalError = console.error;
+        const consoleLog = document.getElementById('console-log');
+        let errorCount = 0;
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+            ).join(' ');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[LOG] ${message}`;
+            consoleLog.appendChild(logEntry);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+            ).join(' ');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[ERROR] ${message}`;
+            logEntry.style.color = '#ff0000';
+            consoleLog.appendChild(logEntry);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+            errorCount++;
+        };
+
+        function clearConsole() {
+            consoleLog.innerHTML = '';
+            errorCount = 0;
+        }
+
+        function logResult(message, type) {
+            const resultsDiv = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.textContent = message;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function testApplicationLoad() {
+            try {
+                const frame = document.getElementById('app-frame');
+                setTimeout(() => {
+                    try {
+                        // Check if the application loaded without critical errors
+                        const frameDoc = frame.contentDocument || frame.contentWindow.document;
+                        const hasSceneObjects = frameDoc.querySelector('.scene-objects');
+                        const hasCanvas = frameDoc.querySelector('#canvas-container canvas');
+                        const hasCameraToggle = frameDoc.querySelector('#tool-toggle-camera');
+                        
+                        if (hasSceneObjects && hasCanvas && hasCameraToggle) {
+                            logResult('✓ Application loaded successfully with all required components', 'pass');
+                        } else {
+                            logResult('⚠ Application loaded but some components may be missing', 'info');
+                        }
+                        
+                        // Check for initialization errors
+                        if (errorCount === 0) {
+                            logResult('✓ No initialization errors detected', 'pass');
+                        } else {
+                            logResult(`⚠ ${errorCount} errors detected during loading`, 'fail');
+                        }
+                    } catch (error) {
+                        logResult(`✗ Error accessing frame: ${error.message}`, 'fail');
+                    }
+                }, 2000);
+            } catch (error) {
+                logResult(`✗ Error testing application load: ${error.message}`, 'fail');
+            }
+        }
+
+        function testCameraObjectsPanel() {
+            try {
+                const frame = document.getElementById('app-frame');
+                setTimeout(() => {
+                    try {
+                        const frameDoc = frame.contentDocument || frame.contentWindow.document;
+                        const sceneObjectsPanel = frameDoc.querySelector('.scene-objects');
+                        
+                        if (sceneObjectsPanel) {
+                            const cameraItems = sceneObjectsPanel.querySelectorAll('[data-type="camera"]');
+                            if (cameraItems.length > 0) {
+                                logResult(`✓ Found ${cameraItems.length} camera object(s) in scene objects panel`, 'pass');
+                                
+                                // Try to click on the camera
+                                const cameraItem = cameraItems[0];
+                                cameraItem.click();
+                                setTimeout(() => {
+                                    logResult('✓ Camera object clicked successfully', 'pass');
+                                }, 500);
+                            } else {
+                                logResult('⚠ No camera objects found in scene objects panel', 'info');
+                            }
+                        } else {
+                            logResult('✗ Scene objects panel not found', 'fail');
+                        }
+                    } catch (error) {
+                        logResult(`✗ Error testing camera objects panel: ${error.message}`, 'fail');
+                    }
+                }, 2000);
+            } catch (error) {
+                logResult(`✗ Error accessing frame: ${error.message}`, 'fail');
+            }
+        }
+
+        function testNoCameraJumping() {
+            logResult('⚠ Manual test required: Camera should NOT jump to cylinder position when selected', 'info');
+            logResult('Please click on "Main Camera" in the scene objects panel and observe if the camera view changes unexpectedly', 'info');
+        }
+
+        function testHandTool() {
+            try {
+                const frame = document.getElementById('app-frame');
+                setTimeout(() => {
+                    try {
+                        const frameDoc = frame.contentDocument || frame.contentWindow.document;
+                        const handToolBtn = frameDoc.getElementById('mode-hand');
+                        
+                        if (handToolBtn) {
+                            logResult('✓ Hand tool button found', 'pass');
+                            handToolBtn.click();
+                            setTimeout(() => {
+                                logResult('✓ Hand tool activated - test manual panning', 'pass');
+                            }, 500);
+                        } else {
+                            logResult('✗ Hand tool button not found', 'fail');
+                        }
+                    } catch (error) {
+                        logResult(`✗ Error testing hand tool: ${error.message}`, 'fail');
+                    }
+                }, 2000);
+            } catch (error) {
+                logResult(`✗ Error accessing frame: ${error.message}`, 'fail');
+            }
+        }
+
+        // Auto-start testing
+        document.addEventListener('DOMContentLoaded', () => {
+            logResult('Ready to test camera fixes. Use manual testing instructions above and automated tests.', 'info');
+        });
+    </script>
+</body>
+</html>

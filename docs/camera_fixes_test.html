@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Fixes Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-title {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #00d4ff;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            background: #333;
+        }
+        .pass {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+        }
+        .fail {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid #ff0000;
+            color: #ff0000;
+        }
+        .info {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid #00d4ff;
+            color: #00d4ff;
+        }
+        button {
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #00a8cc;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #444;
+            border-radius: 8px;
+        }
+        .console-log {
+            background: #000;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Camera Fixes Test</h1>
+        
+        <div class="test-section">
+            <div class="test-title">Test 1: Camera Display in Scene Objects Panel</div>
+            <p>Test that cameras appear correctly in the scene objects panel and can be selected.</p>
+            <button onclick="loadMainApp()">Load Main Application</button>
+            <button onclick="testCameraDisplay()">Test Camera Display</button>
+            <div id="camera-display-result" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Test 2: Camera Helper Integration</div>
+            <p>Test that camera helpers are properly integrated with ViewHelper system.</p>
+            <button onclick="testCameraHelper()">Test Camera Helper</button>
+            <div id="camera-helper-result" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Test 3: Camera Switching</div>
+            <p>Test switching between perspective and isometric cameras.</p>
+            <button onclick="testCameraSwitching()">Test Camera Switching</button>
+            <div id="camera-switching-result" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Test 4: Camera Object Panel Updates</div>
+            <p>Test that camera objects are updated in the scene objects panel when camera type changes.</p>
+            <button onclick="testCameraPanelUpdates()">Test Panel Updates</button>
+            <div id="camera-panel-result" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Application View</div>
+            <iframe id="app-frame" src="index.html"></iframe>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Console Log</div>
+            <div id="console-log" class="console-log"></div>
+            <button onclick="clearConsole()">Clear Console</button>
+        </div>
+    </div>
+
+    <script>
+        // Capture console logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const consoleLog = document.getElementById('console-log');
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+            ).join(' ');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[LOG] ${message}`;
+            consoleLog.appendChild(logEntry);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+            ).join(' ');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[ERROR] ${message}`;
+            logEntry.style.color = '#ff0000';
+            consoleLog.appendChild(logEntry);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        };
+
+        function clearConsole() {
+            consoleLog.innerHTML = '';
+        }
+
+        function loadMainApp() {
+            const frame = document.getElementById('app-frame');
+            frame.src = frame.src;
+            logResult('camera-display-result', 'Loading main application...', 'info');
+        }
+
+        function logResult(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `test-result ${type}`;
+        }
+
+        function testCameraDisplay() {
+            try {
+                const frame = document.getElementById('app-frame');
+                const frameDoc = frame.contentDocument || frame.contentWindow.document;
+                
+                // Wait for frame to load
+                setTimeout(() => {
+                    try {
+                        // Check for scene objects panel
+                        const sceneObjectsPanel = frameDoc.querySelector('.scene-objects');
+                        if (sceneObjectsPanel) {
+                            logResult('camera-display-result', '✓ Scene objects panel found', 'pass');
+                            
+                            // Look for camera objects in the panel
+                            const cameraItems = sceneObjectsPanel.querySelectorAll('[data-type="camera"]');
+                            if (cameraItems.length > 0) {
+                                logResult('camera-display-result', `✓ Found ${cameraItems.length} camera object(s) in scene objects panel`, 'pass');
+                            } else {
+                                logResult('camera-display-result', '⚠ No camera objects found in scene objects panel yet (may need to wait for initialization)', 'info');
+                            }
+                        } else {
+                            logResult('camera-display-result', '✗ Scene objects panel not found', 'fail');
+                        }
+                    } catch (error) {
+                        logResult('camera-display-result', `✗ Error checking camera display: ${error.message}`, 'fail');
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                logResult('camera-display-result', `✗ Error accessing frame: ${error.message}`, 'fail');
+            }
+        }
+
+        function testCameraHelper() {
+            try {
+                const frame = document.getElementById('app-frame');
+                const frameDoc = frame.contentDocument || frame.contentWindow.document;
+                
+                setTimeout(() => {
+                    try {
+                        // Check if ViewHelper exists and has camera support
+                        if (frame.contentWindow.ViewHelper) {
+                            const viewHelper = frame.contentWindow.ViewHelper;
+                            if (viewHelper.addCameraHelper && viewHelper.sceneTraverse) {
+                                logResult('camera-helper-result', '✓ ViewHelper has camera support methods', 'pass');
+                            } else {
+                                logResult('camera-helper-result', '⚠ ViewHelper exists but missing camera methods', 'info');
+                            }
+                        } else {
+                            logResult('camera-helper-result', '⚠ ViewHelper not found in frame context', 'info');
+                        }
+                    } catch (error) {
+                        logResult('camera-helper-result', `✗ Error checking camera helper: ${error.message}`, 'fail');
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                logResult('camera-helper-result', `✗ Error accessing frame: ${error.message}`, 'fail');
+            }
+        }
+
+        function testCameraSwitching() {
+            try {
+                const frame = document.getElementById('app-frame');
+                
+                setTimeout(() => {
+                    try {
+                        // Simulate camera toggle button click
+                        const toggleBtn = frame.contentDocument.getElementById('tool-toggle-camera');
+                        if (toggleBtn) {
+                            toggleBtn.click();
+                            setTimeout(() => {
+                                logResult('camera-switching-result', '✓ Camera toggle button clicked successfully', 'pass');
+                            }, 500);
+                        } else {
+                            logResult('camera-switching-result', '✗ Camera toggle button not found', 'fail');
+                        }
+                    } catch (error) {
+                        logResult('camera-switching-result', `✗ Error testing camera switching: ${error.message}`, 'fail');
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                logResult('camera-switching-result', `✗ Error accessing frame: ${error.message}`, 'fail');
+            }
+        }
+
+        function testCameraPanelUpdates() {
+            try {
+                const frame = document.getElementById('app-frame');
+                
+                setTimeout(() => {
+                    try {
+                        // Check if updateCameraInObjectsPanel method exists in frame context
+                        if (frame.contentWindow.updateCameraInObjectsPanel) {
+                            logResult('camera-panel-result', '✓ updateCameraInObjectsPanel method found', 'pass');
+                        } else {
+                            logResult('camera-panel-result', '⚠ updateCameraInObjectsPanel method not found in global scope (may be in CameraManager)', 'info');
+                        }
+                        
+                        // Check for camera-related methods in frame context
+                        if (frame.contentWindow.CameraManager) {
+                            logResult('camera-panel-result', '✓ CameraManager class found', 'pass');
+                        } else {
+                            logResult('camera-panel-result', '⚠ CameraManager class not found', 'info');
+                        }
+                    } catch (error) {
+                        logResult('camera-panel-result', `✗ Error checking camera panel updates: ${error.message}`, 'fail');
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                logResult('camera-panel-result', `✗ Error accessing frame: ${error.message}`, 'fail');
+            }
+        }
+
+        // Auto-start testing after a delay
+        setTimeout(() => {
+            logResult('camera-display-result', 'Ready to test camera fixes. Click buttons above to run tests.', 'info');
+        }, 1000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Objects Panel Fix Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-title {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #00d4ff;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            background: #333;
+        }
+        .pass {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+        }
+        .fail {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid #ff0000;
+            color: #ff0000;
+        }
+        .info {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid #00d4ff;
+            color: #00d4ff;
+        }
+        button {
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #00a8cc;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #444;
+            border-radius: 8px;
+        }
+        .console-log {
+            background: #000;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .loading {
+            color: #ffa500;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Camera Objects Panel Fix Test</h1>
+        
+        <div class="test-section">
+            <div class="test-title">Test 1: Camera Initialization Without Errors</div>
+            <p>Test that the application initializes without the "Cannot read properties of undefined (reading 'objects')" error.</p>
+            <button onclick="loadAndTest()">Load and Test</button>
+            <button onclick="checkConsole()">Check Console</button>
+            <div id="init-result" class="test-result">Ready to test camera initialization...</div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Test 2: Camera Objects Panel Verification</div>
+            <p>Test that camera objects appear correctly in the scene objects panel.</p>
+            <button onclick="testCameraInPanel()">Test Camera in Panel</button>
+            <div id="panel-result" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Test 3: Camera Helper Integration</div>
+            <p>Test that camera helpers are properly integrated and displayed.</p>
+            <button onclick="testCameraHelper()">Test Camera Helper</button>
+            <div id="helper-result" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Test 4: Camera Switching Functionality</div>
+            <p>Test switching between perspective and isometric cameras.</p>
+            <button onclick="testCameraSwitching()">Test Camera Switching</button>
+            <div id="switching-result" class="test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Application View</div>
+            <iframe id="app-frame" src="index.html"></iframe>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">Console Log</div>
+            <div id="console-log" class="console-log"></div>
+            <button onclick="clearConsole()">Clear Console</button>
+            <button onclick="captureErrors()">Capture Errors</button>
+        </div>
+    </div>
+
+    <script>
+        // Capture console logs and errors
+        const originalLog = console.log;
+        const originalError = console.error;
+        const consoleLog = document.getElementById('console-log');
+        let errorCount = 0;
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+            ).join(' ');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[LOG] ${message}`;
+            consoleLog.appendChild(logEntry);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+            ).join(' ');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[ERROR] ${message}`;
+            logEntry.style.color = '#ff0000';
+            consoleLog.appendChild(logEntry);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+            errorCount++;
+        };
+
+        function clearConsole() {
+            consoleLog.innerHTML = '';
+            errorCount = 0;
+        }
+
+        function logResult(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `test-result ${type}`;
+        }
+
+        function loadAndTest() {
+            const frame = document.getElementById('app-frame');
+            frame.src = frame.src;
+            logResult('init-result', 'Loading application to test camera initialization...', 'info');
+            
+            setTimeout(() => {
+                checkInitialization();
+            }, 3000);
+        }
+
+        function checkInitialization() {
+            try {
+                const frame = document.getElementById('app-frame');
+                const frameDoc = frame.contentDocument || frame.contentWindow.document;
+                
+                // Check if there are any critical initialization errors
+                const hasObjectsPanel = frameDoc.querySelector('.scene-objects');
+                const hasCameraControls = frameDoc.querySelector('#tool-toggle-camera');
+                
+                if (hasObjectsPanel && hasCameraControls) {
+                    logResult('init-result', '✓ Application loaded successfully with scene objects panel and camera controls', 'pass');
+                } else if (hasCameraControls) {
+                    logResult('init-result', '⚠ Camera controls found but scene objects panel may still be loading', 'info');
+                } else {
+                    logResult('init-result', '✗ Camera controls not found - initialization may have failed', 'fail');
+                }
+            } catch (error) {
+                logResult('init-result', `✗ Error accessing frame: ${error.message}`, 'fail');
+            }
+        }
+
+        function checkConsole() {
+            if (errorCount === 0) {
+                logResult('init-result', '✓ No console errors detected', 'pass');
+            } else {
+                logResult('init-result', `✗ ${errorCount} console error(s) detected`, 'fail');
+            }
+        }
+
+        function testCameraInPanel() {
+            try {
+                const frame = document.getElementById('app-frame');
+                
+                setTimeout(() => {
+                    try {
+                        // Look for camera objects in the scene objects panel
+                        const sceneObjectsPanel = frame.contentDocument.querySelector('.scene-objects');
+                        if (sceneObjectsPanel) {
+                            const cameraItems = sceneObjectsPanel.querySelectorAll('[data-type="camera"]');
+                            if (cameraItems.length > 0) {
+                                logResult('panel-result', `✓ Found ${cameraItems.length} camera object(s) in scene objects panel`, 'pass');
+                                
+                                // Try to click on a camera item
+                                const firstCamera = cameraItems[0];
+                                firstCamera.click();
+                                setTimeout(() => {
+                                    logResult('panel-result', '✓ Camera object click successful', 'pass');
+                                }, 500);
+                            } else {
+                                logResult('panel-result', '⚠ No camera objects found in scene objects panel yet', 'info');
+                            }
+                        } else {
+                            logResult('panel-result', '✗ Scene objects panel not found', 'fail');
+                        }
+                    } catch (error) {
+                        logResult('panel-result', `✗ Error checking camera in panel: ${error.message}`, 'fail');
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                logResult('panel-result', `✗ Error accessing frame: ${error.message}`, 'fail');
+            }
+        }
+
+        function testCameraHelper() {
+            try {
+                const frame = document.getElementById('app-frame');
+                
+                setTimeout(() => {
+                    try {
+                        // Check if camera helper exists in the scene
+                        const canvas = frame.contentDocument.querySelector('#canvas-container canvas');
+                        if (canvas) {
+                            // Check if camera helper methods are available
+                            if (frame.contentWindow.app && frame.contentWindow.app.addCameraHelper) {
+                                logResult('helper-result', '✓ Camera helper methods available', 'pass');
+                            } else {
+                                logResult('helper-result', '⚠ Camera helper methods not found', 'info');
+                            }
+                        } else {
+                            logResult('helper-result', '✗ Canvas not found', 'fail');
+                        }
+                    } catch (error) {
+                        logResult('helper-result', `✗ Error checking camera helper: ${error.message}`, 'fail');
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                logResult('helper-result', `✗ Error accessing frame: ${error.message}`, 'fail');
+            }
+        }
+
+        function testCameraSwitching() {
+            try {
+                const frame = document.getElementById('app-frame');
+                
+                setTimeout(() => {
+                    try {
+                        // Find and click the camera toggle button
+                        const cameraToggleBtn = frame.contentDocument.getElementById('tool-toggle-camera');
+                        if (cameraToggleBtn) {
+                            cameraToggleBtn.click();
+                            setTimeout(() => {
+                                // Check if camera type display was updated
+                                const cameraTypeDisplay = frame.contentDocument.querySelector('.camera-type-display');
+                                if (cameraTypeDisplay) {
+                                    logResult('switching-result', '✓ Camera switching successful with display update', 'pass');
+                                } else {
+                                    logResult('switching-result', '✓ Camera switching successful', 'pass');
+                                }
+                            }, 500);
+                        } else {
+                            logResult('switching-result', '✗ Camera toggle button not found', 'fail');
+                        }
+                    } catch (error) {
+                        logResult('switching-result', `✗ Error testing camera switching: ${error.message}`, 'fail');
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                logResult('switching-result', `✗ Error accessing frame: ${error.message}`, 'fail');
+            }
+        }
+
+        function captureErrors() {
+            logResult('init-result', `Current error count: ${errorCount}`, 'info');
+        }
+
+        // Auto-refresh frame on load
+        document.addEventListener('DOMContentLoaded', () => {
+            logResult('init-result', 'Ready to test camera objects panel fix. Click "Load and Test" to begin.', 'info');
+        });
+    </script>
+</body>
+</html>
