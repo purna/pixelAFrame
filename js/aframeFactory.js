@@ -1,4 +1,4 @@
-/**
+n/**
  * A-Frame Object Factory
  * Creates A-Frame elements with predefined properties
  */
@@ -37,17 +37,34 @@ export class AFrameFactory {
             'gltf-model': 'a-gltf-model',
             'obj-model': 'a-obj-model',
             
-            // Generic
+            // Core Elements
             'entity': 'a-entity',
+            'assets': 'a-assets',
+            'mixin': 'a-mixin',
+            'asset-item': 'a-asset-item',
             
             // Environment
             'light': 'a-light',
             'camera': 'a-camera',
             'environment': 'a-entity',
             
+            // Controls & Camera
+            'look-controls': 'a-entity',
+            'wasd-controls': 'a-entity',
+            'orbit-controls': 'a-entity',
+            
             // VR
             'hand-controls': 'a-entity',
             'hand-tracking-controls': 'a-entity',
+            'laser-controls': 'a-entity',
+            
+            // Interaction
+            'raycaster': 'a-entity',
+            'super-hands': 'a-entity',
+            
+            // Animation
+            'animation': 'a-entity',
+            'animation-mixer': 'a-entity',
             
             // Preloaded assets (models)
             'xbot': 'a-gltf-model',
@@ -411,6 +428,204 @@ export class AFrameFactory {
     createEntity(options = {}) {
         return this.createElement('entity', {
             position: options.position || '0 0 -3',
+            ...options
+        });
+    }
+    
+    // Create assets container
+    createAssets(options = {}) {
+        // a-assets is a container, not an entity in the scene
+        // It needs to be added to the scene before entities that reference it
+        const scene = document.querySelector('a-scene');
+        if (!scene) return null;
+        
+        let assets = scene.querySelector('a-assets');
+        if (!assets) {
+            assets = document.createElement('a-assets');
+            scene.insertBefore(assets, scene.firstChild);
+        }
+        
+        if (options.preload) {
+            assets.setAttribute('preload', options.preload);
+        }
+        
+        return assets;
+    }
+    
+    // Create mixin definition
+    createMixin(options = {}) {
+        // Mixins need to be added to a-assets
+        const scene = document.querySelector('a-scene');
+        if (!scene) return null;
+        
+        let assets = scene.querySelector('a-assets');
+        if (!assets) {
+            assets = document.createElement('a-assets');
+            scene.insertBefore(assets, scene.firstChild);
+        }
+        
+        const mixin = document.createElement('a-mixin');
+        mixin.id = options.id || 'mixin-' + Date.now();
+        
+        // Apply geometry
+        if (options.geometry) {
+            mixin.setAttribute('geometry', options.geometry);
+        }
+        
+        // Apply material
+        if (options.material) {
+            mixin.setAttribute('material', options.material);
+        }
+        
+        // Apply animation
+        if (options.animation) {
+            mixin.setAttribute('animation', options.animation);
+        }
+        
+        assets.appendChild(mixin);
+        return mixin;
+    }
+    
+    // Create asset item
+    createAssetItem(options = {}) {
+        const scene = document.querySelector('a-scene');
+        if (!scene) return null;
+        
+        let assets = scene.querySelector('a-assets');
+        if (!assets) {
+            assets = document.createElement('a-assets');
+            scene.insertBefore(assets, scene.firstChild);
+        }
+        
+        const item = document.createElement('a-asset-item');
+        item.id = options.id || 'asset-' + Date.now();
+        item.setAttribute('src', options.src || '');
+        
+        assets.appendChild(item);
+        return item;
+    }
+    
+    // Create look controls
+    createLookControls(options = {}) {
+        return this.createElement('look-controls', {
+            position: options.position || '0 0 0',
+            'look-controls': {
+                reverseMouseDrag: options.reverseMouseDrag || false,
+                touchEnabled: options.touchEnabled !== undefined ? options.touchEnabled : true,
+                magicWindowTrackingEnabled: options.magicWindowTrackingEnabled !== undefined ? options.magicWindowTrackingEnabled : true
+            },
+            ...options
+        });
+    }
+    
+    // Create WASD controls
+    createWasdControls(options = {}) {
+        return this.createElement('wasd-controls', {
+            position: options.position || '0 0 0',
+            'wasd-controls': {
+                acceleration: options.acceleration || 65,
+                fly: options.fly || false,
+                adEnabled: options.adEnabled !== undefined ? options.adEnabled : true,
+                wsEnabled: options.wsEnabled !== undefined ? options.wsEnabled : true
+            },
+            ...options
+        });
+    }
+    
+    // Create orbit controls
+    createOrbitControls(options = {}) {
+        return this.createElement('orbit-controls', {
+            position: options.position || '0 2 5',
+            'orbit-controls': {
+                target: options.target || '0 0 0',
+                enableDamping: options.enableDamping !== undefined ? options.enableDamping : true,
+                dampingFactor: options.dampingFactor || 0.25,
+                minDistance: options.minDistance || 0.5,
+                maxDistance: options.maxDistance || 180,
+                initialPosition: options.initialPosition || '0 2 5'
+            },
+            ...options
+        });
+    }
+    
+    // Create laser controls for VR controllers
+    createLaserControls(options = {}) {
+        return this.createElement('laser-controls', {
+            position: options.position || '0 0 0',
+            'laser-controls': {
+                hand: options.hand || 'right',
+                model: options.model !== undefined ? options.model : true,
+                raycaster: options.raycaster || {
+                    far: 10,
+                    objects: '.clickable'
+                }
+            },
+            ...options
+        });
+    }
+    
+    // Create raycaster
+    createRaycaster(options = {}) {
+        return this.createElement('raycaster', {
+            position: options.position || '0 0 0',
+            raycaster: {
+                objects: options.objects || '.clickable',
+                far: options.far || 10,
+                near: options.near || 0.1,
+                interval: options.interval || 100,
+                showLine: options.showLine !== undefined ? options.showLine : true,
+                lineColor: options.lineColor || '#ff0000',
+                lineOpacity: options.lineOpacity || 1
+            },
+            ...options
+        });
+    }
+    
+    // Create super-hands component
+    createSuperHands(options = {}) {
+        return this.createElement('super-hands', {
+            position: options.position || '0 0 0',
+            'super-hands': {
+                colliderEvent: options.colliderEvent || ' collisions',
+                colliderEventProperty: options.colliderEventProperty || ' els',
+                colliderEndEvent: options.colliderEndEvent || ' collisions',
+                colliderEndEventProperty: options.colliderEndEventProperty || ' clearedEls'
+            },
+            ...options
+        });
+    }
+    
+    // Create animation component
+    createAnimation(options = {}) {
+        return this.createElement('animation', {
+            position: options.position || '0 0 0',
+            animation: {
+                property: options.property || 'rotation',
+                to: options.to || '0 360 0',
+                from: options.from || '0 0 0',
+                dur: options.dur || 2000,
+                delay: options.delay || 0,
+                easing: options.easing || 'linear',
+                loop: options.loop !== undefined ? options.loop : true,
+                dir: options.dir || 'normal',
+                startEvents: options.startEvents || '',
+                pauseEvents: options.pauseEvents || '',
+                resumeEvents: options.resumeEvents || ''
+            },
+            ...options
+        });
+    }
+    
+    // Create animation-mixer for GLTF animations
+    createAnimationMixer(options = {}) {
+        return this.createElement('animation-mixer', {
+            position: options.position || '0 0 0',
+            'animation-mixer': {
+                clip: options.clip || '*',
+                loop: options.loop || 'repeat',
+                crossFadeDuration: options.crossFadeDuration || 0,
+                timeScale: options.timeScale || 1
+            },
             ...options
         });
     }

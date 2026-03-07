@@ -19,7 +19,7 @@ class TutorialConfig {
                         arrowPosition: 'none', // No arrow for center position
                         arrowPositionOverride: 'center', // Arrow position along the side (center, top-third, middle-third, bottom-third)
                         marginOverride: '0',
-                        heading: 'Welcome to Pixel 3D!',
+                        heading: 'Welcome to Pixel AFrame!',
                         content: 'This quick tutorial will guide you through the main features of the 3D Staging Studio.',
                         showNext: true,
                         showSkip: true

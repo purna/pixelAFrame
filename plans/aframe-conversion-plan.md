@@ -3,9 +3,10 @@
 Current Status:
 ✅ Phase 0: VR/AR Buttons
 ✅ Phase 1: Core A-Frame Integration
-✅ Phase 1B: Materials to Mixins
+✅ Phase 1B: Materials to Mixins System (NEEDS UPDATE)
 ✅ Phase 1C: Example Assets
 ✅ Phase 2: UI Adaptation
+✅ Phase 2B: Toolbar Elements (COMPLETE - added all categories)
 ✅ Phase 3: Element Management
 ✅ Phase 4: Animation/VR Playback (basic)
 ✅ Phase 5: Export Functionality
@@ -264,14 +265,210 @@ document.addEventListener('keydown', (e) => {
 
 ---
 
-## Phase 1B: Materials to Mixins System ✅ COMPLETE
+## Phase 1B: Materials to Mixins System 🔄 UPDATE NEEDED
 
 ### Overview
 
-**Implementation Status:** ✅ COMPLETE
+**Implementation Status:** 🔄 PARTIAL - Needs Update
 - Extended MaterialsManager with mixin support in [`js/materialsManager.js`](js/materialsManager.js:430-560)
-- Added methods: createMixin, createMixinFromMaterial, applyMixinToSelected, updateAFrameAssets, exportMixinsAsHTML
-- Mixins are synced with A-Frame scene's `<a-assets>` container
+- Mixins currently limited to material properties only - NEEDS EXPANSION
+- Need to add full A-Frame component support to mixins
+
+### Current Problem
+
+1. **Naming**: Currently shows "Materials" instead of "Mixins"
+2. **Limited Scope**: Mixins only hold material/color values, but A-Frame mixins can hold:
+   - Geometry properties (primitive, width, height, radius, etc.)
+   - Material properties (color, metalness, roughness, src, etc.)
+   - Animation properties (property, to, dur, easing, loop, etc.)
+   - Any custom component properties
+
+### Mixins Can Hold (Reference: https://aframe.io/docs/1.7.0/core/mixins.html)
+
+```html
+<a-scene>
+  <a-assets>
+    <!-- Mixin defining geometry, material, AND animation -->
+    <a-mixin id="box-spin"
+      geometry="primitive: box; width: 1; height: 1; depth: 1"
+      material="color: red; metalness: 0.5"
+      animation="property: rotation; to: 0 360 0; loop: true; dur: 5000">
+    </a-mixin>
+  </a-assets>
+  
+  <!-- Apply mixin to entity -->
+  <a-entity mixin="box-spin"></a-entity>
+</a-scene>
+```
+
+### Required Updates for Mixins System
+
+1. **Rename UI**: Change "Materials" to "Mixins" in the right panel
+2. **Expand Mixin Editor**: Add property sections for:
+   - **Geometry**: Select primitive, set dimensions
+   - **Material**: Color, metalness, roughness, opacity, texture
+   - **Animation**: Property, to, from, dur, delay, easing, loop, dir
+   - **Custom Components**: Any additional A-Frame components
+3. **Element List**: Create a mixin property element picker with:
+   - Available geometry primitives
+   - Available material properties
+   - Available animation properties
+   - Custom component schemas
+
+### Mixin Data Structure (Updated)
+
+```javascript
+// Full mixin definition - can hold ANY A-Frame component
+{
+    id: 'mixin-123',
+    name: 'Animated Red Box',
+    type: 'mixin',
+    // Geometry component
+    geometry: {
+        primitive: 'box',
+        width: 1,
+        height: 1,
+        depth: 1
+    },
+    // Material component
+    material: {
+        color: '#ff0000',
+        metalness: 0.8,
+        roughness: 0.2,
+        opacity: 1
+    },
+    // Animation component
+    animation: {
+        property: 'rotation',
+        to: '0 360 0',
+        from: '0 0 0',
+        dur: 5000,
+        delay: 0,
+        easing: 'linear',
+        loop: true,
+        dir: 'normal'
+    },
+    // Any custom components
+    sound: {
+        src: '#audio',
+        autoplay: false,
+        loop: false,
+        volume: 1
+    },
+    // Apply to entity via mixin attribute
+    applyAs: 'mixin'
+}
+```
+
+### Updated Mixin UI Requirements
+
+```html
+<!-- Full Mixin Editor Panel -->
+<div id="mixins-section" class="mixins-section">
+    <div class="panel-header">
+        <div class="panel-header-title">
+            <i class="fas fa-clone"></i> Mixins
+        </div>
+    </div>
+    
+    <div class="mixin-controls">
+        <button class="btn" id="btn-create-mixin">
+            <i class="fas fa-plus"></i> Create Mixin
+        </button>
+    </div>
+    
+    <div id="mixins-list" class="mixins-list">
+        <!-- Mixin items -->
+    </div>
+    
+    <!-- Full Mixin Editor -->
+    <div id="mixin-editor" class="mixin-editor">
+        <!-- Name -->
+        <div class="property-group">
+            <label>Mixin Name</label>
+            <input type="text" id="mixin-name">
+        </div>
+        
+        <!-- Geometry Section -->
+        <div class="property-group">
+            <div class="property-header">
+                <i class="fas fa-cube"></i> Geometry
+            </div>
+            <select id="mixin-geo-primitive">
+                <option value="box">Box</option>
+                <option value="sphere">Sphere</option>
+                <option value="cylinder">Cylinder</option>
+                <option value="cone">Cone</option>
+                <option value="plane">Plane</option>
+                <option value="torus">Torus</option>
+                <option value="torusKnot">Torus Knot</option>
+            </select>
+            <!-- Dynamic geometry inputs based on primitive -->
+            <div id="mixin-geo-props"></div>
+        </div>
+        
+        <!-- Material Section -->
+        <div class="property-group">
+            <div class="property-header">
+                <i class="fas fa-paint-brush"></i> Material
+            </div>
+            <label>Color: <input type="color" id="mixin-mat-color"></label>
+            <label>Metalness: <input type="range" id="mixin-mat-metalness" min="0" max="1" step="0.1"></label>
+            <label>Roughness: <input type="range" id="mixin-mat-roughness" min="0" max="1" step="0.1"></label>
+            <label>Opacity: <input type="range" id="mixin-mat-opacity" min="0" max="1" step="0.1"></label>
+            <label>Src: <input type="text" id="mixin-mat-src" placeholder="asset id or url"></label>
+        </div>
+        
+        <!-- Animation Section -->
+        <div class="property-group">
+            <div class="property-header">
+                <i class="fas fa-film"></i> Animation
+            </div>
+            <label><input type="checkbox" id="mixin-anim-enabled"> Enable Animation</label>
+            <select id="mixin-anim-property">
+                <option value="position">Position</option>
+                <option value="rotation">Rotation</option>
+                <option value="scale">Scale</option>
+                <option value="opacity">Opacity</option>
+            </select>
+            <label>To: <input type="text" id="mixin-anim-to"></label>
+            <label>Duration (ms): <input type="number" id="mixin-anim-dur" value="2000"></label>
+            <label>Delay (ms): <input type="number" id="mixin-anim-delay" value="0"></label>
+            <select id="mixin-anim-easing">
+                <option value="linear">Linear</option>
+                <option value="easeInQuad">Ease In Quad</option>
+                <option value="easeOutQuad">Ease Out Quad</option>
+                <option value="easeInOutQuad">Ease In Out Quad</option>
+            </select>
+            <label><input type="checkbox" id="mixin-anim-loop" checked> Loop</label>
+        </div>
+        
+        <!-- Custom Components Section -->
+        <div class="property-group">
+            <div class="property-header">
+                <i class="fas fa-puzzle-piece"></i> Custom Components
+            </div>
+            <button class="btn" id="btn-add-mixin-component">Add Component</button>
+            <div id="mixin-custom-components"></div>
+        </div>
+        
+        <div class="mixin-actions">
+            <button class="btn" id="btn-save-mixin">Save Mixin</button>
+            <button class="btn primary" id="btn-apply-mixin">Apply to Selected</button>
+        </div>
+    </div>
+</div>
+```
+
+### Implementation Tasks
+
+- [ ] Rename "Materials" panel section to "Mixins" in index.html
+- [ ] Add geometry section to mixin editor
+- [ ] Add animation section to mixin editor  
+- [ ] Add custom components section
+- [ ] Create mixin property element picker/list
+- [ ] Update mixin creation to support all A-Frame components
+- [ ] Test mixin application to A-Frame entities
 
 ### Current System Analysis
 
@@ -1780,15 +1977,17 @@ generateAFrameHTML(entities) {
 - `assets/aframe/` - Directory with preloaded assets (audio, models)
 
 ### Modified Files
-- `index.html` - Added A-Frame libs, toolbar menu, overlay controls, header buttons for save/load/export
+- `index.html` - Added A-Frame libs, toolbar menu with all element categories, overlay controls, header buttons for save/load/export
 - `js/main.js` - Added A-Frame button handlers, keyboard shortcuts
-- `js/materialsManager.js` - Added mixin support
+- `js/materialsManager.js` - Added mixin support (needs UI update to rename to Mixins)
 - `js/layerManager.js` - Added A-Frame entity rendering
 - `js/fileManager.js` - Added save/load/export methods for A-Frame (saveScene, saveToBrowser, loadFromBrowser, exportAsAFrameHTML with ZIP support, generateAFrameHTML)
 - `js/ui.js` - Added event handlers for new buttons (export-json, export, load-browser), keyboard shortcuts
 - `js/historyManager.js` - Fixed ClearSceneCommand to clear both Three.js and A-Frame scenes
+- `js/aframeFactory.js` - Added all element types and factory methods (assets, mixin, look-controls, wasd-controls, orbit-controls, laser-controls, raycaster, super-hands, animation, animation-mixer)
 - `css/styles.css` - Added A-Frame UI styling
 - `plans/aframe-conversion-plan.md` - Updated with completion status
+- `README.md` - Updated with VR/AR features and keyboard shortcuts
 
 ### Dependencies Added
 - A-Frame 1.5.0
@@ -1918,6 +2117,15 @@ For model viewers:
 - [x] A-Frame mode toggle (F6)
 - [x] CSS styling for playback controls
 
+### Phase 2B: Toolbar Elements (Complete)
+- [x] Added missing element categories to toolbar:
+  - Advanced: entity, assets, mixin
+  - Camera & Controls: camera, look-controls, wasd-controls, orbit-controls
+  - Hand Tracking: hand-controls, hand-tracking-controls, laser-controls
+  - Interaction & Physics: raycaster, super-hands
+  - Animation: animation, animation-mixer
+- [x] Added factory methods for new elements in aframeFactory.js
+
 ### Phase 3: A-Frame Element Management
 - [x] Extended LayerManager for A-Frame entities
 - [x] getAFrameIcon() method
@@ -1951,17 +2159,37 @@ For model viewers:
 - [ ] Document A-Frame Elements toolbar usage
 - [ ] Document Play/Stop animations
 
-### Phase 1C: Add Example Assets ✅ COMPLETE
-- [x] Copy hand models from aframe-gh-pages (use hand-controls with WebXR defaults)
-- [x] Add example GLTF models (engine, table, tree1, tree2, Xbot, Ybot)
-- [x] Add example sounds (blip1, blip2)
-- [x] Register assets in A-Frame scene (preloadAssets method)
-- [x] Add factory methods for preloaded assets (createXbot, createYbot, etc.)
+### Phase 1B: Materials to Mixins System 🔄 NEEDS UPDATE
+- [x] Extended MaterialsManager with mixin support
+- [x] Added factory methods for all A-Frame element types
+- [x] Updated toolbar with all element categories
+- [ ] **RENAME UI**: Change "Materials" to "Mixins" in the right panel
+- [ ] **EXPAND MIXIN EDITOR**: Add geometry, animation, and custom component sections
+- [ ] **CREATE MIXIN PROPERTY PICKER**: Add element list for selecting which properties a mixin can hold
 
-### Phase 2: UI Adaptation (Partial)
-- [ ] Properties panel integration for A-Frame entities
+### Phase 1C: Add Example Assets ✅ COMPLETE
+- [x] Created assets/aframe/ directory
+- [x] Added audio files (blip1.wav, blip2.wav)
+- [x] Added GLTF models (engine, table, tree1, tree2, Xbot, Ybot)
+- [x] Registered assets in A-Frame scene (preloadAssets method)
+- [x] Added factory methods for preloaded assets (createXbot, createYbot, etc.)
+
+### Phase 2: UI Adaptation (Complete - Added Missing Elements)
+- [x] Primitives: box, sphere, cylinder, cone, plane, torus, torus-knot, circle, ring, triangle
+- [x] Media: image, video, sky, videosphere, sound
+- [x] Text & UI: text, cursor
+- [x] Models: gltf-model
+- [x] Environment: environment, light
+- [x] Assets (Preloaded): xbot, ybot, tree1, tree2, table, engine, blip1, blip2
+- [x] Advanced: entity, assets, mixin (JUST ADDED)
+- [x] Camera & Controls: camera, look-controls, wasd-controls, orbit-controls (JUST ADDED)
+- [x] Hand Tracking: hand-controls, hand-tracking-controls, laser-controls (JUST ADDED)
+- [x] Interaction & Physics: raycaster, super-hands (JUST ADDED)
+- [x] Animation: animation, animation-mixer (JUST ADDED)
 
 ### Phase 3: A-Frame Element Management (Partial)
+- [x] Extended LayerManager for A-Frame entities
+- [x] Entity selection syncing
 - [ ] Transform controls for A-Frame entities
 - [ ] Multi-select with Shift+Click
 
@@ -1971,10 +2199,13 @@ For model viewers:
 - [ ] Implement behavior categories: Navigation, Interaction, Messages, Animation, VR/AR
 
 ### Phase 4: Animation & VR Playback (Partial)
+- [x] playAnimations() method
+- [x] stopAnimations() method
+- [x] VR mode entry (F5)
+- [x] AR mode entry
 - [ ] Full animation system with UI (js/aframeAnimationManager.js)
 - [ ] Animation property editor
 - [ ] GLTF animation-mixer support
-- [ ] Hand tracking controls
 - [ ] Teleportation
 
 ### Phase 5: Export Functionality ✅ COMPLETE
