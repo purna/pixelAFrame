@@ -10,6 +10,8 @@ export class HistoryManager {
 
     // Execute a command and add it to history
     async executeCommand(command) {
+        console.log('executeCommand called, command:', command.constructor.name);
+        
         // Remove any history after current index (when adding new command after undo)
         if (this.currentIndex < this.history.length - 1) {
             this.history = this.history.slice(0, this.currentIndex + 1);
@@ -26,6 +28,7 @@ export class HistoryManager {
         if (success !== false) { // Only add to history if execution was successful
             this.history.push(command);
             this.currentIndex++;
+            console.log('Command added to history, currentIndex:', this.currentIndex, 'history length:', this.history.length);
 
             // Limit history size
             if (this.history.length > this.maxHistorySize) {
@@ -34,6 +37,8 @@ export class HistoryManager {
             }
 
             this.updateUndoRedoButtons();
+        } else {
+            console.log('Command execution failed, not adding to history');
         }
 
         return success;
@@ -43,11 +48,13 @@ export class HistoryManager {
     undo() {
         if (this.canUndo()) {
             const command = this.history[this.currentIndex];
+            console.log('Undo called, command:', command.constructor.name, 'currentIndex:', this.currentIndex);
             command.undo();
             this.currentIndex--;
             this.updateUndoRedoButtons();
             return true;
         }
+        console.log('Undo called but cannot undo, currentIndex:', this.currentIndex, 'history length:', this.history.length);
         return false;
     }
 
@@ -261,6 +268,8 @@ export class TransformObjectCommand {
     execute() {
         if (!this.object) return false;
         
+        console.log('TransformObjectCommand.execute called, object:', this.object.uuid, 'newTransform:', this.newTransform);
+        
         this.object.position.set(
             this.newTransform.position.x,
             this.newTransform.position.y,
@@ -284,7 +293,12 @@ export class TransformObjectCommand {
     }
 
     undo() {
-        if (!this.object) return false;
+        if (!this.object) {
+            console.log('TransformObjectCommand.undo called but object is null/undefined');
+            return false;
+        }
+        
+        console.log('TransformObjectCommand.undo called, object:', this.object.uuid, 'oldTransform:', this.oldTransform);
         
         this.object.position.set(
             this.oldTransform.position.x,

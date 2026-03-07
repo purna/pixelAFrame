@@ -320,6 +320,8 @@ class StageApp {
     captureTransformChange(object) {
         if (!object) return;
 
+        console.log('captureTransformChange called for object:', object.uuid || object.name);
+
         // Store current transform
         const currentTransform = {
             position: { x: object.position.x, y: object.position.y, z: object.position.z },
@@ -329,9 +331,12 @@ class StageApp {
 
         // Store previous transform (from before the change)
         if (!object.userData.previousTransform) {
+            console.log('No previousTransform found, storing current and returning');
             object.userData.previousTransform = currentTransform;
             return;
         }
+
+        console.log('Previous transform exists, creating TransformObjectCommand');
 
         // Create and execute transform command
         const oldTransform = object.userData.previousTransform;

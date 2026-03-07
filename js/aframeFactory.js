@@ -1,4 +1,4 @@
-n/**
+/**
  * A-Frame Object Factory
  * Creates A-Frame elements with predefined properties
  */
