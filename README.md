@@ -1,6 +1,6 @@
 # Pixel 3D - Pro Staging Studio
 
-> A powerful browser-based 3D modeling and staging application with AI-powered scene generation capabilities.
+> A powerful browser-based virtual 3D modeling and staging application with AI-powered scene generation and VR/AR capabilities.
 
 ![Pixel 3D Hero Screenshot](./screenshots/hero-screenshot.png)
 *[Replace with actual hero screenshot showing the main application interface]*
@@ -12,6 +12,13 @@
 - **Primitive Shapes**: Comprehensive set of 3D primitives (Box, Sphere, Cone, Cylinder, Plane, Torus, Tetrahedron, Octahedron, Dodecahedron, Icosahedron, Torus Knot)
 - **Advanced Lighting**: Multiple light types including Point, Spot, Directional, Ambient, and Hemisphere lighting
 - **Real-time Rendering**: Powered by Three.js with high-performance WebGL rendering
+
+### 🥽 VR/AR Support (NEW!)
+- **A-Frame Integration**: Create VR-ready 3D scenes with full WebXR support
+- **VR Mode**: Enter immersive VR mode with headset support (F5)
+- **AR Mode**: View scenes in augmented reality
+- **A-Frame Elements**: Full toolbar menu with primitives, media, models, environment, and VR interaction elements
+- **Animation Playback**: Play/stop animations in VR (F8/F9)
 
 ### 🤖 AI-Powered Scene Generation
 - **Magic Scene Generator**: Describe your scene in natural language and let AI create it
@@ -29,6 +36,7 @@
 - **Layer Management**: Organize objects in folders for better scene organization
 - **Materials System**: Comprehensive material editor with color management
 - **History Management**: Full undo/redo functionality for all actions
+- **A-Frame Mode**: Toggle between Three.js editor and A-Frame preview (F6)
 
 ### 📸 Export & Production
 - **High-Resolution Export**: Export scenes as PNG with customizable resolution
@@ -36,6 +44,7 @@
 - **Custom Resolutions**: Set any custom width and height for exports
 - **Camera Border**: Visual preview of export area with draggable preview
 - **Transparent Background**: Optional transparent background for compositing
+- **A-Frame Export**: Export scenes as standalone HTML files or ZIP archives for VR
 
 ### ⚙️ Advanced Settings
 - **Grid & Axes**: Toggle grid and axes helpers for precise positioning
@@ -47,7 +56,8 @@
 ### 💾 File Management
 - **Browser Storage**: Save scenes directly to your browser
 - **JSON Import/Export**: Full scene serialization and loading
-- **Export Options**: Multiple export formats and settings
+- **Export Options**: Multiple export formats including PNG, JSON, and A-Frame HTML
+- **ZIP Export**: Download complete A-Frame projects as ZIP files
 
 ## 🚀 Quick Start
 
@@ -63,6 +73,14 @@
 4. **Generate with AI**: Try the Magic Scene Generator for AI-assisted scene creation
 5. **Export**: Use the export tool to save your creation as a PNG image
 
+### Creating VR Scenes
+1. **Toggle A-Frame Mode**: Press F6 or click the A-Frame button in header
+2. **Add A-Frame Elements**: Use the toolbar menu to add VR elements
+3. **Add Animations**: Select entities and configure animation properties
+4. **Preview**: Press F8 to play animations in preview mode
+5. **Enter VR**: Press F5 to enter immersive VR mode (with headset)
+6. **Export**: Click "Export ZIP" to download a complete VR-ready project
+
 ![Quick Start Demo](./demos/quick-start-demo.gif)
 *[Replace with actual demo video showing basic scene creation]*
 
@@ -77,6 +95,8 @@
 - **Logo**: Pixel 3D branding with version indicator
 - **Undo/Redo**: History navigation controls
 - **File Operations**: Clear, Load, Save to Browser, Export
+- **VR/AR Buttons**: Enter VR (F5) and AR modes
+- **A-Frame Toggle**: Switch between Three.js and A-Frame modes (F6)
 
 #### Left Toolbar
 - **Selection Tool**: Click to select objects (Keyboard: Q)
@@ -84,6 +104,7 @@
 - **Shapes Menu**: Comprehensive primitive shape tools
 - **Characters Menu**: Animated character models
 - **Lights Menu**: Various lighting options
+- **A-Frame Elements**: VR element creation (primitives, media, models, environment)
 - **Materials Tool**: Material editor and manager
 - **Scene Settings**: Export and scene configuration
 - **Settings**: Application preferences
@@ -93,9 +114,10 @@
 - **Transform Controls**: Move, rotate, scale buttons
 - **Zoom Controls**: Zoom slider and controls
 - **Grid & Axes**: Visual helpers for positioning
+- **Overlay Controls**: Play/Stop buttons for A-Frame animations
 
 #### Right Panel
-- **Scene Objects**: Layer manager and object list
+- **Scene Objects**: Layer manager and object list (shows A-Frame entities in A-Frame mode)
 - **Properties**: Object-specific property editor
 - **Materials**: Material management section
 - **Scene Export**: Export settings and preview
@@ -113,7 +135,12 @@
 | `Ctrl+Z` | Undo |
 | `Ctrl+Y` | Redo |
 | `Ctrl+Shift+O` | Toggle Overlays |
+| `Ctrl+Shift+L` | Load from Browser |
 | `+/-` | Zoom In/Out |
+| `F5` | Enter VR Mode |
+| `F6` | Toggle A-Frame Mode |
+| `F8` | Play Animations |
+| `F9` | Stop Animations |
 
 ### AI Scene Generation
 
@@ -138,6 +165,22 @@
 3. Characters automatically animate with idle, walk, and run cycles
 4. Use transform controls to position and scale characters
 
+### VR Scene Creation
+
+![VR Scene Creation](./demos/vr-scene-creation.gif)
+*[Replace with demo video showing VR scene creation]*
+
+1. Press F6 or click "A-Frame" to switch to A-Frame mode
+2. Use the A-Frame Elements toolbar menu to add VR objects:
+   - **Primitives**: Box, Sphere, Cylinder, Cone, Plane, Torus, etc.
+   - **Media**: Images, Videos, 360° images, Audio
+   - **Models**: GLTF models with animation support
+   - **Environment**: Sky, lighting, environment presets
+   - **VR Interaction**: Hand controls, cursors, raycasters
+3. Select entities to edit properties in the right panel
+4. Press F8 to preview animations
+5. Press F5 to enter VR mode (requires VR headset)
+
 ### Exporting Scenes
 
 ![Export Process](./demos/export-process.gif)
@@ -151,12 +194,27 @@
 3. Click "Export as PNG" to save your scene
 4. Choose from preset resolutions or set custom dimensions
 
+### Exporting VR Projects
+
+1. Switch to A-Frame mode (F6)
+2. Add your A-Frame elements
+3. Click "Export ZIP" in the header
+4. Downloads a ZIP containing:
+   - `index.html` - Complete A-Frame scene
+   - `css/style.css` - Basic styles
+   - `assets/` - Folder structure for models and media
+
 ## 🎯 Use Cases
 
 ### Content Creation
 - **Social Media**: Create eye-catching 3D images for posts
 - **Marketing**: Generate product visualizations and scene mockups
 - **Presentations**: Design 3D backgrounds and visual elements
+
+### VR/AR Development
+- **WebVR Experiences**: Create immersive VR websites
+- **Virtual Tours**: Build 360° environment tours
+- **Interactive Training**: Develop VR training simulations
 
 ### Design & Prototyping
 - **Product Visualization**: Prototype 3D product designs
@@ -166,17 +224,26 @@
 ### Education & Learning
 - **3D Modeling Education**: Learn 3D concepts in a browser
 - **Scene Composition**: Study lighting, materials, and composition
+- **VR Development**: Learn A-Frame webVR development
 - **AI Collaboration**: Explore AI-assisted creative workflows
 
 ## 🛠️ Technical Details
 
 ### Technology Stack
 - **3D Engine**: Three.js WebGL
+- **VR Framework**: A-Frame (WebXR)
 - **AI Integration**: Google Gemini API
 - **Character Models**: GLTF format support
 - **Storage**: Browser Local Storage
-- **Export**: PNG with configurable resolution
+- **Export**: PNG, JSON, A-Frame HTML, ZIP
 - **Architecture**: Modular ES6 JavaScript classes
+
+### A-Frame Integration
+- **Core**: A-Frame 1.5.0 with WebXR support
+- **Extras**: A-Frame Extras for animation-mixer and controls
+- **Environment**: A-Frame Environment Component for procedural scenes
+- **Interaction**: Super Hands for VR interaction
+- **Physics**: A-Frame Physics System for collision detection
 
 ### Performance
 - **WebGL Acceleration**: Hardware-accelerated 3D rendering
@@ -185,11 +252,11 @@
 - **Responsive Design**: Optimized for various screen sizes
 
 ### Browser Compatibility
-- **Chrome**: Full support (recommended)
+- **Chrome**: Full support (recommended for VR)
 - **Firefox**: Full support
 - **Safari**: Full support
 - **Edge**: Full support
-- **Mobile**: Limited support (desktop recommended)
+- **Mobile**: Limited support (desktop recommended for editing)
 
 ## 📁 Project Structure
 
@@ -202,15 +269,21 @@ pixel3d-main/
 │   ├── main.js             # Application bootstrap and core logic
 │   ├── ui.js               # User interface management
 │   ├── factory.js          # 3D object creation factory
+│   ├── aframeFactory.js    # A-Frame entity factory (NEW!)
+│   ├── aframeSceneManager.js # A-Frame scene management (NEW!)
 │   ├── gemini.js           # AI scene generation
 │   ├── characterManager.js # Character animation system
-│   ├── materialsManager.js # Material editing system
-│   ├── layerManager.js     # Scene organization
+│   ├── materialsManager.js # Material editing & mixins system
+│   ├── layerManager.js     # Scene organization & A-Frame entities
 │   ├── cameraManager.js    # Camera control system
 │   ├── historyManager.js   # Undo/redo functionality
-│   ├── fileManager.js      # Save/load system
+│   ├── fileManager.js      # Save/load/export system
 │   ├── tooltip.js          # Help tooltips
 │   └── config.js           # Application configuration
+├── assets/
+│   └── aframe/            # A-Frame preloaded assets (NEW!)
+│       ├── audio/          # Sound files
+│       └── models/         # GLTF models
 ├── Art/
 │   ├── Xbot.blend          # Blender source for female character
 │   ├── Xbot.glb            # GLTF female character model
@@ -230,6 +303,12 @@ pixel3d-main/
 3. Update the shapes menu in `index.html`
 4. Implement selection and transform handling
 
+### Adding A-Frame Elements
+1. Extend `AFrameFactory` in `js/aframeFactory.js`
+2. Add element creation method
+3. Update toolbar menu in `index.html`
+4. Add to entity selection system
+
 ### AI Prompts
 Customize AI behavior by modifying the system prompts in `js/gemini.js`:
 - Scene generation prompts
@@ -241,6 +320,7 @@ Extend the materials system by:
 - Adding new material types in `js/materialsManager.js`
 - Implementing custom shaders
 - Creating material presets
+- Creating A-Frame mixins for VR
 
 ## 🤝 Contributing
 
@@ -265,6 +345,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🙏 Acknowledgments
 
 - **Three.js Community**: For the amazing 3D WebGL framework
+- **A-Frame Community**: For the powerful WebVR framework
 - **Google Gemini**: For AI-powered scene generation
 - **Mixamo**: For providing high-quality character models
 - **Inter Font**: For the beautiful typography
@@ -278,7 +359,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Pixel 3D - Pro Staging Studio** - Creating the future of browser-based 3D design, one pixel at a time. 🚀
+**Pixel 3D - Pro Virtual Studio** - Creating the future of browser-based 3D design and VR experiences, one pixel at a time. 🚀
 
 ![Pixel 3D Logo](./branding/pixel3d-logo.png)
 *[Replace with actual application logo]*
