@@ -351,12 +351,74 @@ Add VR-ready elements">
             <div class="panel-header" style="border-top:1px solid var(--border-color);">
                 <div class="panel-header-title"><i class="fas fa-sliders-h"></i> Properties</div>
             </div>
-            <div id="props-content" class="panel-content">
-                <div class="empty-state">
+            <div id="props-content" class="panel-content props-scrollable">
+                <!-- Add Component Section (for A-Frame elements) -->
+                <div id="aframe-components-section" class="aframe-components-section" style="display: none;">
+                    <div class="property-group">
+                        <div class="property-label">Add Component</div>
+                        <select id="add-component-select" class="component-select">
+                            <option value="">Select component...</option>
+                            <optgroup label="Core">
+                                <option value="geometry">geometry</option>
+                                <option value="material">material</option>
+                                <option value="position">position</option>
+                                <option value="rotation">rotation</option>
+                                <option value="scale">scale</option>
+                            </optgroup>
+                            <optgroup label="Animation">
+                                <option value="animation">animation</option>
+                                <option value="animation-mixer">animation-mixer</option>
+                            </optgroup>
+                            <optgroup label="Controls">
+                                <option value="look-controls">look-controls</option>
+                                <option value="wasd-controls">wasd-controls</option>
+                                <option value="orbit-controls">orbit-controls</option>
+                            </optgroup>
+                            <optgroup label="Interaction">
+                                <option value="cursor">cursor</option>
+                                <option value="raycaster">raycaster</option>
+                                <option value="super-hands">super-hands</option>
+                            </optgroup>
+                            <optgroup label="Media">
+                                <option value="sound">sound</option>
+                                <option value="gltf-model">gltf-model</option>
+                            </optgroup>
+                            <optgroup label="Environment">
+                                <option value="environment">environment</option>
+                                <option value="light">light</option>
+                            </optgroup>
+                        </select>
+                        <button class="btn" id="btn-add-component" style="margin-top: 5px; width: 100%;">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    </div>
+                    
+                    <!-- Added Components List -->
+                    <div id="components-list" class="components-list">
+                        <!-- Component items will be added here -->
+                    </div>
+                    
+                    <!-- Component Properties Editor -->
+                    <div id="component-properties-editor" class="component-properties-editor" style="display: none;">
+                        <div class="property-group">
+                            <div class="property-header">
+                                <span id="selected-component-name">Selected Component</span>
+                                <button class="btn icon-only" id="btn-remove-component" title="Remove Component">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            <div id="component-property-inputs">
+                                <!-- Dynamic property inputs -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="empty-state" id="props-empty-state">
                     <p>Click on an object to edit properties</p>
                     <br>
                     <p>Right click to deselect an object</p>
-               </div>
+                </div>
             </div>
 
             <!-- Materials Section (hidden by default) -->
