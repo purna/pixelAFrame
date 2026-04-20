@@ -244,6 +244,11 @@ class StageApp {
             this.transformControl.setSize(1.5); // Increased size for better visibility
             this.transformControl.visible = true;
 
+            // Ensure all axes are explicitly visible (fix for gizmo visibility)
+            this.transformControl.showX = true;
+            this.transformControl.showY = true;
+            this.transformControl.showZ = true;
+
             // Add space property for better 3D manipulation
             this.transformControl.space = 'local';
 
@@ -387,9 +392,11 @@ class StageApp {
     // Get all objects including those in folders
     getAllObjects() {
         let allObjects = [...this.objects];
-        if (this.layerManager) {
+        if (this.layerManager && this.layerManager.folders) {
             this.layerManager.folders.forEach(folder => {
-                allObjects = [...allObjects, ...folder.objects];
+                if (folder && folder.objects) {
+                    allObjects = [...allObjects, ...folder.objects];
+                }
             });
         }
         return allObjects;
@@ -493,6 +500,9 @@ class StageApp {
     // --- MANIPULATION ---
 
     onPointerMove(event) {
+        // Guard against null transformControl
+        if (!this.transformControl) return;
+        
         // Track hover state for transform controls
         if (this.transformControl) {
             const rect = this.renderer.domElement.getBoundingClientRect();
@@ -525,6 +535,9 @@ class StageApp {
     }
 
     onMouseUp(event) {
+        // Guard against null transformControl
+        if (!this.transformControl) return;
+        
         // Check if we should deselect on mouse up
         // This handles the case where user clicks on empty space after gizmo interaction
         if (this.selectedObject && !this.transformControl.isHovered) {
@@ -575,7 +588,8 @@ class StageApp {
         if (!this.selectedObject) return;
         
         // Don't deselect if gizmo is being hovered (user might click it next)
-        if (this.transformControl.isHovered) return;
+        // Guard against null transformControl
+        if (this.transformControl && this.transformControl.isHovered) return;
         
         // Calculate mouse position
         const rect = this.renderer.domElement.getBoundingClientRect();
@@ -672,6 +686,12 @@ class StageApp {
     }
 
     selectObject(obj) {
+        // Guard against null transformControl
+        if (!this.transformControl) {
+            console.warn('TransformControl not initialized yet');
+            return;
+        }
+
         // Special Handling: Limb selection should select the Joint (parent)
         if (obj.userData.name && obj.parent.userData.name && obj.parent.userData.name.includes('Joint')) {
             this.selectedObject = obj.parent;
@@ -682,7 +702,8 @@ class StageApp {
         // Ensure transform controls are visible and properly attached
         this.transformControl.attach(this.selectedObject);
         this.transformControl.visible = true;
-        this.transformControl.setSize(1.0);
+        // Use consistent size with initial setup
+        this.transformControl.setSize(1.5);
 
         // Debug: Log the selected object and transform control state
         console.log('Selected object:', this.selectedObject);
@@ -698,12 +719,21 @@ class StageApp {
 
     deselect() {
         this.selectedObject = null;
-        this.transformControl.detach();
-        this.transformControl.visible = false;
+        // Guard against null transformControl
+        if (this.transformControl) {
+            this.transformControl.detach();
+            this.transformControl.visible = false;
+        }
         this.ui.updateUI(null);
     }
 
     setTransformMode(mode) {
+        // Guard against null transformControl
+        if (!this.transformControl) {
+            console.warn('TransformControl not initialized yet');
+            return;
+        }
+
         if (mode === 'hand') {
             // Enable orbit controls for hand tool with optimized touch/trackpad settings
             if (this.orbit) {
