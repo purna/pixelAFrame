@@ -54,43 +54,7 @@ export class GeminiManager {
     }
 
     async callGemini(userText, systemText) {
-        // Retry logic parameters
-        let retries = 0;
-        const maxRetries = 3;
-        const baseDelay = 1000;
-
-        while (retries <= maxRetries) {
-            try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${this.apiKey}`;
-                
-                const payload = {
-                    contents: [{ parts: [{ text: userText }] }],
-                    systemInstruction: { parts: [{ text: systemText }] }
-                };
-
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`API Error: ${response.status}`);
-                }
-
-                const data = await response.json();
-                
-                if (data.candidates && data.candidates.length > 0) {
-                    return data.candidates[0].content.parts[0].text;
-                } else {
-                    throw new Error("No candidates returned");
-                }
-            } catch (error) {
-                retries++;
-                if (retries > maxRetries) throw error;
-                // Exponential backoff
-                await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, retries)));
-            }
-        }
+        if (!window.PixelAIProvider) throw new Error("AI provider settings are not ready. Refresh the page and try again.");
+        return window.PixelAIProvider.generateText(userText, systemText);
     }
 }
