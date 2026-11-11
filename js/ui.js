@@ -1018,7 +1018,7 @@ export class UI {
                                 return;
                             }
                             selected.setAttribute('material', 'color', color.color);
-                        }), iconButton('fa-edit', 'Edit color', () => this.openColorEditDialog(index), iconButton('fa-trash', 'Delete color', () => {
+                        }), iconButton('fa-edit', 'Edit color', () => this.openColorEditDialog(index)), iconButton('fa-trash', 'Delete color', () => {
                             const colors = getColorAssets();
                             colors.splice(index, 1);
                             saveColorAssets(colors);
