@@ -87,7 +87,7 @@ export class AFrameAssetSystem {
 
     seedExampleAssets() {
         const seedKey = 'pixelAFrame-example-assets-seeded';
-        const seedVersion = '2';
+        const seedVersion = '3';
         if (localStorage.getItem(seedKey) === seedVersion) return;
 
         const examples = [
@@ -96,6 +96,12 @@ export class AFrameAssetSystem {
             { name: 'Rusted Metal', type: 'image', src: svgTexture('Rusted Metal', '#8a4b2a', '<g fill="#b85c2e"><circle cx="40" cy="48" r="18"/><circle cx="160" cy="80" r="26"/><circle cx="90" cy="180" r="22"/><circle cx="210" cy="210" r="16"/></g><g fill="#5c301c"><circle cx="120" cy="40" r="9"/><circle cx="220" cy="120" r="12"/><circle cx="40" cy="220" r="10"/></g>') },
             { name: 'Wood Plank', type: 'image', src: svgTexture('Wood Plank', '#9c6434', '<g stroke="#70441f" stroke-width="4"><path d="M0 52 H256 M0 104 H256 M0 156 H256 M0 208 H256"/></g><g stroke="#b97a43" stroke-width="2"><path d="M20 18 C70 8 110 30 160 18 S230 26 256 16"/><path d="M0 80 C50 68 100 92 150 78 S220 88 256 76"/><path d="M0 140 C60 126 110 150 170 136 S230 146 256 132"/></g>') },
             { name: 'UV Checker Reference', type: 'image', src: svgTexture('UV Checker', '#202020', '<g fill="#ff4fc3"><rect x="0" y="0" width="32" height="32"/><rect x="64" y="0" width="32" height="32"/><rect x="128" y="0" width="32" height="32"/><rect x="192" y="0" width="32" height="32"/><rect x="32" y="32" width="32" height="32"/><rect x="96" y="32" width="32" height="32"/><rect x="160" y="32" width="32" height="32"/><rect x="224" y="32" width="32" height="32"/><rect x="0" y="64" width="32" height="32"/><rect x="64" y="64" width="32" height="32"/><rect x="128" y="64" width="32" height="32"/><rect x="192" y="64" width="32" height="32"/></g>') },
+            { name: 'Xbot Character', type: 'model', src: 'assets/aframe/models/Xbot.glb' },
+            { name: 'Ybot Character', type: 'model', src: 'assets/aframe/models/Ybot.glb' },
+            { name: 'Tree 1', type: 'model', src: 'assets/aframe/models/tree1.glb' },
+            { name: 'Tree 2', type: 'model', src: 'assets/aframe/models/tree2.glb' },
+            { name: 'Table', type: 'model', src: 'assets/aframe/models/table.glb' },
+            { name: 'Engine', type: 'model', src: 'assets/aframe/models/engine.glb' },
             { name: 'Explosion VFX Reference', type: 'video', src: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4' },
             { name: 'Blast VFX Reference', type: 'video', src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4' },
             { name: 'UI Blip', type: 'audio', src: wavDataUrl(0.14, t => Math.sin(2 * Math.PI * 660 * t) * Math.exp(-t * 28) * 0.5) },
