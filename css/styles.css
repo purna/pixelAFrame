@@ -2040,3 +2040,21 @@ input[type="color"] {
 .scene-settings-panel {
     padding: 0;
 }
+
+/* Advanced action editor is collapsed to avoid duplicating Behaviours. */
+.advanced-actions summary {
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 0.74rem;
+    font-weight: bold;
+    padding: 4px 0;
+}
+
+.advanced-actions summary:hover {
+    color: var(--text-primary);
+}
+
+.advanced-actions[open] summary {
+    color: var(--accent-tertiary);
+    margin-bottom: 6px;
+}

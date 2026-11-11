@@ -170,3 +170,26 @@
 .loading-spinner.active {
     display: block;
 }
+/* Asset editor fields */
+.modal-body .property-group {
+    margin-bottom: 12px;
+}
+
+.modal-body .property-label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.modal-body input,
+.modal-body select,
+.modal-body textarea {
+    width: 100%;
+    padding: 7px 9px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-light);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 0.8rem;
+}

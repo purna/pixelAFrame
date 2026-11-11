@@ -923,6 +923,7 @@ export class UI {
                             iconButton('fa-check', 'Use on selected element', () => {
                                 if (!assetSystem.applyAssetToSelected(asset.id)) this.showNotification('Select an A-Frame element first.', 'info');
                             }),
+                            iconButton('fa-edit', 'Edit asset', () => this.openAssetEditDialog(asset)),
                             iconButton('fa-trash', 'Delete asset', () => {
                                 if (!window.confirm(`Delete asset "${asset.name}"?`)) return;
                                 assetSystem.removeAsset(asset.id);
@@ -995,12 +996,14 @@ export class UI {
             renderList = () => {
                 listContainer.innerHTML = '';
                 const query = this.assetSearch.toLowerCase();
-                const colors = getColorAssets().filter(color => !query || color.name.toLowerCase().includes(query));
+                const colors = getColorAssets()
+                    .map((color, index) => ({ color, index }))
+                    .filter(({ color }) => !query || color.name.toLowerCase().includes(query));
                 if (!colors.length) {
                     listContainer.innerHTML = '<div class="empty-state"><p>No color assets yet.</p><p>Add a named color above.</p></div>';
                     return;
                 }
-                colors.forEach((color, index) => {
+                colors.forEach(({ color, index }) => {
                     const preview = document.createElement('div');
                     preview.className = 'material-preview';
                     preview.style.backgroundColor = color.color;
@@ -1015,7 +1018,7 @@ export class UI {
                                 return;
                             }
                             selected.setAttribute('material', 'color', color.color);
-                        }), iconButton('fa-trash', 'Delete color', () => {
+                        }), iconButton('fa-edit', 'Edit color', () => this.openColorEditDialog(index), iconButton('fa-trash', 'Delete color', () => {
                             const colors = getColorAssets();
                             colors.splice(index, 1);
                             saveColorAssets(colors);
@@ -1069,6 +1072,7 @@ export class UI {
                                 mixinSystem.applyToElement(selected, mixin.id);
                                 this.renderAFramePropertiesPanel(selected);
                             }),
+                            iconButton('fa-edit', 'Edit mixin', () => this.openMixinEditDialog(mixin)),
                             iconButton('fa-trash', 'Delete mixin', () => {
                                 if (!window.confirm(`Delete mixin "${mixin.name}"?`)) return;
                                 mixinSystem.deleteMixin(mixin.id);
@@ -1116,6 +1120,108 @@ export class UI {
             renderList();
         });
         renderList();
+    }
+
+    createEditorModal(title, bodyHtml) {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay open';
+        overlay.innerHTML = `
+            <div class="modal">
+                <div class="modal-title">${title}</div>
+                <div class="modal-body">${bodyHtml}</div>
+                <div class="modal-actions">
+                    <button class="btn" data-close>Cancel</button>
+                    <button class="btn primary" data-save>Save</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        const close = () => overlay.remove();
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        overlay.querySelector('[data-close]').addEventListener('click', close);
+        return { overlay, close, save: overlay.querySelector('[data-save]') };
+    }
+
+    openAssetEditDialog(asset) {
+        if (!asset) return;
+        const modal = this.createEditorModal(`Edit Asset: ${asset.name}`, `
+            <div class="property-group"><label class="property-label">Name</label><input type="text" data-field="name" value="${asset.name || ''}"></div>
+            <div class="property-group"><label class="property-label">Type</label>
+                <select class="component-select" data-field="type">
+                    ${['image', 'panorama', 'video', 'audio', 'model'].map(type => `<option value="${type}" ${asset.type === type ? 'selected' : ''}>${type}</option>`).join('')}
+                </select>
+            </div>
+            <div class="property-group"><label class="property-label">Source URL</label><input type="text" data-field="src" value="${asset.src || ''}"></div>
+            <input type="file" data-file style="display:none">
+            <button class="btn" data-choose style="width:100%;"><i class="fas fa-folder-open"></i> Replace File</button>
+        `);
+        const body = modal.overlay.querySelector('.modal-body');
+        const fileInput = body.querySelector('[data-file]');
+        body.querySelector('[data-choose]').addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files && fileInput.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                body.querySelector('[data-field="src"]').value = reader.result;
+                if (!body.querySelector('[data-field="name"]').value) body.querySelector('[data-field="name"]').value = file.name;
+            };
+            reader.readAsDataURL(file);
+        });
+        modal.save.addEventListener('click', () => {
+            this.app.assetSystem?.updateAsset(asset.id, {
+                name: body.querySelector('[data-field="name"]').value.trim() || asset.name,
+                type: body.querySelector('[data-field="type"]').value,
+                src: body.querySelector('[data-field="src"]').value.trim()
+            });
+            modal.close();
+            this.renderAssetsSection();
+        });
+    }
+
+    openColorEditDialog(index) {
+        let colors = [];
+        try { colors = JSON.parse(localStorage.getItem('pixelAFrame-color-assets') || '[]'); } catch (err) { colors = []; }
+        const color = colors[index];
+        if (!color) return;
+        const modal = this.createEditorModal('Edit Color Asset', `
+            <div class="property-group"><label class="property-label">Name</label><input type="text" data-field="name" value="${color.name || ''}"></div>
+            <div class="property-group"><label class="property-label">Color</label><input type="color" data-field="color" value="${color.color || '#4CC3D9'}"></div>
+        `);
+        const body = modal.overlay.querySelector('.modal-body');
+        modal.save.addEventListener('click', () => {
+            colors[index] = {
+                name: body.querySelector('[data-field="name"]').value.trim() || color.name,
+                color: body.querySelector('[data-field="color"]').value
+            };
+            localStorage.setItem('pixelAFrame-color-assets', JSON.stringify(colors));
+            modal.close();
+            this.renderAssetsSection();
+        });
+    }
+
+    openMixinEditDialog(mixin) {
+        if (!mixin) return;
+        const modal = this.createEditorModal(`Edit Mixin: ${mixin.name}`, `
+            <div class="property-group"><label class="property-label">Name</label><input type="text" data-field="name" value="${mixin.name || ''}"></div>
+            <div class="property-group"><label class="property-label">Components (JSON)</label><textarea class="component-select" rows="8" data-field="components">${JSON.stringify(mixin.components || {}, null, 2).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea></div>
+        `);
+        const body = modal.overlay.querySelector('.modal-body');
+        modal.save.addEventListener('click', () => {
+            let components;
+            try {
+                components = JSON.parse(body.querySelector('[data-field="components"]').value);
+            } catch (err) {
+                this.showNotification('Components must be valid JSON.', 'error');
+                return;
+            }
+            this.app.mixinSystem?.updateMixin(mixin.id, {
+                name: body.querySelector('[data-field="name"]').value.trim() || mixin.name,
+                components
+            });
+            modal.close();
+            this.renderAssetsSection();
+        });
     }
 
     setupPanelTabs() {
@@ -1689,6 +1795,40 @@ export class UI {
             mediaGroup.className = 'property-group';
             mediaGroup.innerHTML = `<div class="property-label">Media</div>`;
 
+            // Pick an existing asset from the Asset Library.
+            const assetTypes = tag === 'a-sound' ? ['audio']
+                : (tag === 'a-video' || tag === 'a-videosphere') ? ['video']
+                : tag === 'a-gltf-model' ? ['model']
+                : ['image', 'panorama'];
+            const assetRow = document.createElement('div');
+            assetRow.className = 'input-group';
+            const assetLabel = document.createElement('span');
+            assetLabel.textContent = 'Asset';
+            const assetSelect = document.createElement('select');
+            assetSelect.className = 'component-select';
+            assetSelect.innerHTML = '<option value="">Choose from Asset Library...</option>';
+            (this.app.assetSystem?.getAssets?.() || [])
+                .filter(asset => assetTypes.includes(asset.type))
+                .forEach(asset => {
+                    const option = document.createElement('option');
+                    option.value = asset.id;
+                    option.textContent = `${asset.name} (#${asset.id})`;
+                    option.dataset.src = '#' + asset.id;
+                    assetSelect.appendChild(option);
+                });
+            const currentSrc = entity.getAttribute('src') || '';
+            if (currentSrc.startsWith('#')) assetSelect.value = currentSrc.slice(1);
+            assetSelect.addEventListener('change', () => {
+                const selected = assetSelect.selectedOptions[0];
+                if (!selected || !selected.value) return;
+                const src = '#' + selected.value;
+                srcInput.value = src;
+                entity.setAttribute('src', src);
+            });
+            assetRow.appendChild(assetLabel);
+            assetRow.appendChild(assetSelect);
+            mediaGroup.appendChild(assetRow);
+
             const srcRow = document.createElement('div');
             srcRow.className = 'input-group';
             const srcLabel = document.createElement('span');
@@ -1698,7 +1838,9 @@ export class UI {
             srcInput.placeholder = 'https://... or choose a file';
             srcInput.value = entity.getAttribute('src') || '';
             srcInput.addEventListener('change', () => {
-                entity.setAttribute('src', srcInput.value.trim());
+                const value = srcInput.value.trim();
+                entity.setAttribute('src', value);
+                if (!value.startsWith('#')) assetSelect.value = '';
             });
             srcRow.appendChild(srcLabel);
             srcRow.appendChild(srcInput);
@@ -1800,9 +1942,11 @@ export class UI {
         // actions here so the advanced editor does not delete them.
         const behaviors = allBehaviors.filter(action => !action._behaviorId);
 
-        const behaviorGroup = document.createElement('div');
-        behaviorGroup.className = 'property-group';
-        behaviorGroup.innerHTML = `<div class="property-label">Behaviours / Triggers</div>`;
+        const behaviorGroup = document.createElement('details');
+        behaviorGroup.className = 'property-group advanced-actions';
+        const advancedSummary = document.createElement('summary');
+        advancedSummary.textContent = 'Advanced custom actions';
+        behaviorGroup.appendChild(advancedSummary);
 
         if (behaviors.length === 0) {
             const empty = document.createElement('div');
