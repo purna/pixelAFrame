@@ -1471,7 +1471,13 @@ export class UI {
 
     // --- PROPERTIES PANEL ---
     updateUI(selectedObject) {
-        if (selectedObject) this.switchRightTab('properties');
+        if (selectedObject) {
+            const panel = document.getElementById('right-panel');
+            if (panel && panel.classList.contains('hidden')) {
+                this.togglePropertiesPanel();
+            }
+            this.switchRightTab('properties');
+        }
 
         // Delegate Layer List Rendering to LayerManager
         if (this.app.layerManager) {
