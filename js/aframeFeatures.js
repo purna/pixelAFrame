@@ -103,10 +103,18 @@ export const AFrameFeatureScript = `
 
             switch (type) {
                 case 'goto-url':
-                    if (value) window.location.href = value;
+                    if (value) {
+                        if (action.newTab) window.open(value, '_blank');
+                        else window.location.href = value;
+                    }
                     break;
                 case 'open-window':
-                    if (value) window.open(value, action.windowName || '_blank');
+                    if (value) {
+                        var features = 'noopener';
+                        if (action.width) features += ',width=' + action.width;
+                        if (action.height) features += ',height=' + action.height;
+                        window.open(value, action.windowName || '_blank', features);
+                    }
                     break;
                 case 'go-back':
                     history.back();
@@ -151,6 +159,41 @@ export const AFrameFeatureScript = `
                 case 'set-visible':
                     if (target) target.setAttribute('visible', value === true || value === 'true');
                     break;
+                case 'restore-image':
+                    if (target) {
+                        var original = target.getAttribute('data-studio-original-src');
+                        if (original) {
+                            target.setAttribute('src', original);
+                            target.setAttribute('material', 'src', original);
+                        }
+                    }
+                    break;
+                case 'set-attribute':
+                    if (target && action.attribute) {
+                        var parts = String(action.attribute).split('.');
+                        if (parts.length > 1) target.setAttribute(parts[0], parts[1], value);
+                        else target.setAttribute(action.attribute, value);
+                    }
+                    break;
+                case 'control-animation': {
+                    var animTarget = target || el;
+                    if (!animTarget || !action.animation) break;
+                    if (action.command === 'Remove') {
+                        animTarget.removeAttribute(action.animation);
+                    } else {
+                        var anim = animTarget.components && animTarget.components[action.animation];
+                        if (anim && action.command === 'Pause' && anim.pause) anim.pause();
+                        if (anim && action.command === 'Resume' && anim.play) anim.play();
+                    }
+                    break;
+                }
+                case 'emit-event':
+                    if (target && action.eventName) {
+                        var detail = {};
+                        try { detail = JSON.parse(action.detail || '{}'); } catch (err) { detail = {}; }
+                        target.emit(action.eventName, detail);
+                    }
+                    break;
                 case 'teleport-camera': {
                     var cameraRig = el.sceneEl && (el.sceneEl.querySelector('#camera-rig') || el.sceneEl.querySelector('a-camera'));
                     if (cameraRig) {
@@ -178,6 +221,90 @@ export const AFrameFeatureScript = `
                     });
                     break;
                 }
+                case 'create-entity': {
+                    var sceneEl = el.sceneEl;
+                    if (!sceneEl) break;
+                    var shape = document.createElement(action.shape || 'a-sphere');
+                    shape.setAttribute('color', action.color || '#a78bfa');
+                    var pos = action.position || 'random';
+                    if (pos === 'random') {
+                        pos = [(Math.random() * 4 - 2).toFixed(1), (1 + Math.random() * 2).toFixed(1), (-2 - Math.random() * 3).toFixed(1)].join(' ');
+                    }
+                    shape.setAttribute('position', pos);
+                    shape.setAttribute('scale', '0.5 0.5 0.5');
+                    if (action.clickable) shape.classList.add('clickable');
+                    shape.dataset.studioCreated = 'true';
+                    sceneEl.appendChild(shape);
+                    break;
+                }
+                case 'remove-created-entities': {
+                    var created = el.sceneEl ? el.sceneEl.querySelectorAll('[data-studio-created]') : [];
+                    created.forEach(function (entity) { entity.remove(); });
+                    break;
+                }
+                case 'check-feature': {
+                    var feature = action.feature || 'WebGL2';
+                    var test = Promise.resolve(false);
+                    if (feature.indexOf('WebXR') === 0 && navigator.xr) {
+                        test = navigator.xr.isSessionSupported(feature.indexOf('AR') > -1 ? 'immersive-ar' : 'immersive-vr');
+                    } else if (feature === 'WebGL2') {
+                        test = Promise.resolve(!!document.createElement('canvas').getContext('webgl2'));
+                    } else if (feature === 'Web Audio') {
+                        test = Promise.resolve(!!(window.AudioContext || window.webkitAudioContext));
+                    } else if (feature === 'Service Worker') {
+                        test = Promise.resolve('serviceWorker' in navigator);
+                    } else if (feature === 'Geolocation') {
+                        test = Promise.resolve('geolocation' in navigator);
+                    } else if (feature === 'Vibration') {
+                        test = Promise.resolve('vibrate' in navigator);
+                    } else if (feature === 'Clipboard') {
+                        test = Promise.resolve(!!navigator.clipboard);
+                    } else if (feature === 'Fullscreen') {
+                        test = Promise.resolve(!!document.fullscreenEnabled);
+                    } else if (feature === 'Touch input') {
+                        test = Promise.resolve(navigator.maxTouchPoints > 0);
+                    }
+                    test.catch(function () { return false; }).then(function (supported) {
+                        var url = supported ? action.yesUrl : action.noUrl;
+                        if (url) window.open(url, '_blank');
+                    });
+                    break;
+                }
+                case 'toggle-fullscreen': {
+                    var fullscreenTarget = (el.sceneEl && el.sceneEl.canvas) || document.documentElement;
+                    if (document.fullscreenElement) document.exitFullscreen();
+                    else if (fullscreenTarget.requestFullscreen) fullscreenTarget.requestFullscreen();
+                    break;
+                }
+                case 'copy-clipboard':
+                    if (navigator.clipboard && value) navigator.clipboard.writeText(value);
+                    break;
+                case 'speak-text':
+                    if (window.speechSynthesis && value) {
+                        speechSynthesis.speak(new SpeechSynthesisUtterance(value));
+                    }
+                    break;
+                case 'share':
+                    if (navigator.share) {
+                        navigator.share({ title: action.title || '', text: action.text || '', url: value || '' }).catch(function () {});
+                    }
+                    break;
+                case 'animate-element': {
+                    var domTarget = target || el;
+                    if (domTarget && domTarget.animate) {
+                        domTarget.animate({ [action.property || 'transform']: value }, {
+                            duration: Number(action.duration) || 1200,
+                            easing: action.easing || 'ease-in-out',
+                            iterations: Number(action.iterations) || 1,
+                            direction: action.direction || 'alternate',
+                            fill: 'forwards'
+                        });
+                    }
+                    break;
+                }
+                case 'stop-animations':
+                    if (target && target.getAnimations) target.getAnimations().forEach(function (anim) { anim.cancel(); });
+                    break;
                 case 'start-animation':
                     (target || el).emit('start-anim');
                     break;

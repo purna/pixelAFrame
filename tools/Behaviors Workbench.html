@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Behaviors Workbench – Dreamweaver MX (6)</title>
+<style>
+:root{--bg:#eef0f4;--pn:#fff;--tx:#1b1f24;--mu:#667085;--bd:#cfd4dc;--ac:#2f6fed;--sf:#f6f7f9;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14161a;--pn:#1e2127;--tx:#e8eaed;--mu:#98a2b3;--bd:#3a3f48;--ac:#6b9bff;--sf:#262a31}}
+:root[data-theme="dark"]{--bg:#14161a;--pn:#1e2127;--tx:#e8eaed;--mu:#98a2b3;--bd:#3a3f48;--ac:#6b9bff;--sf:#262a31}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:10px 14px}
+h1{font-size:17px;margin:0}h1 small{color:var(--mu);font-weight:400;display:block;font-size:12px}
+main{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(300px,1fr);gap:12px;padding:0 14px 14px}
+@media(max-width:820px){main{grid-template-columns:1fr}}
+.box{background:var(--pn);border:1px solid var(--bd);border-radius:8px}
+#page{padding:10px;position:relative;min-height:430px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+img{width:110px;height:70px;border-radius:8px}
+button,select,input,textarea{font:inherit;color:var(--tx);background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:4px 8px}
+button{cursor:pointer}button:hover{border-color:var(--ac)}
+input{width:110px}
+a{color:var(--ac)}
+.nv{padding:5px 14px;border-radius:6px;border:1px solid var(--bd);cursor:pointer;user-select:none;background:var(--sf)}
+.nv[data-s=Over]{background:#f5b942;color:#000}.nv[data-s=Down]{background:var(--ac);color:#fff}.nv[data-s=OverDown]{background:#8e4ec6;color:#fff}
+#layers{position:relative;height:150px;border:1px dashed var(--bd);border-radius:6px}
+.layer{position:absolute;width:130px;height:56px;display:grid;place-items:center;border-radius:6px;color:#1b1f24;font-weight:600;touch-action:none;user-select:none;box-shadow:0 1px 4px #0003;text-align:center;font-size:12px}
+#status{padding:4px 10px;border-top:1px solid var(--bd);font-size:12px;color:var(--mu);background:var(--sf);border-radius:0 0 8px 8px;min-height:24px}
+aside{padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.bar{display:flex;gap:6px;flex-wrap:wrap}.bar select{flex:1;min-width:120px}
+#list{border:1px solid var(--bd);border-radius:6px;min-height:110px;max-height:220px;overflow:auto;background:var(--sf)}
+.r{display:flex;gap:8px;align-items:center;padding:4px 6px;border-bottom:1px solid var(--bd);cursor:pointer}
+.r.on{background:color-mix(in srgb,var(--ac) 20%,transparent)}.r select{width:112px;padding:2px}
+.hint{color:var(--mu);margin:8px;font-size:12px}
+.tabs{display:flex;gap:6px}.tabs .on{border-color:var(--ac);color:var(--ac)}
+#out{margin:0;height:170px;overflow:auto;background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:8px;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-all}
+dialog{background:var(--pn);color:var(--tx);border:1px solid var(--bd);border-radius:10px;max-width:min(440px,92vw);width:100%}
+dialog::backdrop{background:#0006}
+dialog label{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+dialog input[type=checkbox]{width:auto;justify-self:start}dialog input,dialog select,dialog textarea{width:100%}
+.bt{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+#am{white-space:pre-wrap;font:inherit;margin:0 0 10px}
+.pm{position:fixed;display:flex;z-index:50;border-radius:6px;overflow:hidden;box-shadow:0 4px 16px #0005}.pm div{padding:6px 14px;cursor:pointer;white-space:nowrap}
+a-scene{display:block;height:260px;width:100%;border-radius:6px;overflow:hidden;margin-bottom:8px}
+</style></head><body>
+<header><h1>Behaviors Workbench<small>Dreamweaver MX (6) behaviours, plus modern web and A-Frame (WebXR) interaction behaviours, on a live test page. Obsolete plugin-era actions have been removed.</small></h1>
+<div class="bar"><button id="bl">Fire onLoad</button><button id="bu">Fire onUnload</button><button id="cl">Clear log</button></div></header>
+<main>
+<section class="box"><div id="page">
+<div class="row"><img id="Image1" data-t="img" alt=""><img id="Image2" data-t="img" alt=""><img id="Image3" data-t="img" alt=""><a href="#" id="link1" data-t="link" onclick="return false">Hover for pop-up menu</a><button id="btn1" data-t="button">Button1</button></div>
+<div class="row"><div class="nv" id="nav1" data-t="nav" data-s="Up">Home</div><div class="nv" id="nav2" data-t="nav" data-s="Up">About</div><div class="nv" id="nav3" data-t="nav" data-s="Up">Contact</div><select id="jump1" data-t="select"></select><button id="go1" data-t="button">Go</button></div>
+<form id="form1" data-t="form" class="row" onsubmit="return false"><input id="fName" data-t="input" placeholder="Name"><input id="fEmail" data-t="input" placeholder="E-mail"><input id="fAge" data-t="input" placeholder="Age"><button type="submit">Submit</button><button type="reset">Reset</button></form>
+<div id="layers"><div class="layer" id="Layer1" data-t="layer" style="left:10px;top:10px;background:#fde68a">Layer1</div><div class="layer" id="Layer2" data-t="layer" style="left:160px;top:10px;background:#a7f3d0">Layer2</div><div class="layer" id="Layer3" data-t="layer" style="left:20px;top:80px;width:100px;background:#bfdbfe">Layer3</div></div>
+<div class="row" style="margin-top:10px"><button id="vrBtn" data-t="button">Enter VR</button><button id="mkBtn" data-t="button">Add shape</button><button id="rmBtn" data-t="button">Clear shapes</button><button id="fsBtn" data-t="button">Fullscreen 3D</button></div>
+<a-scene id="scene" data-t="ascene" embedded vr-mode-ui="enabled:true" background="color:#0f1b33" renderer="antialias:true">
+<a-entity id="rig" data-t="a3d" position="0 0 0"><a-entity id="cam" data-t="a3d" camera look-controls wasd-controls position="0 1.6 0" cursor="rayOrigin:mouse" raycaster="objects:.clickable"></a-entity></a-entity>
+<a-entity id="lHand" data-t="ahand" laser-controls="hand:left" raycaster="objects:.clickable"></a-entity><a-entity id="rHand" data-t="ahand" laser-controls="hand:right" raycaster="objects:.clickable"></a-entity>
+<a-box id="box1" data-t="a3d" class="clickable" position="-1.2 1 -3" color="#4CC3D9"></a-box><a-sphere id="sphere1" data-t="a3d" class="clickable" position="0 1.4 -4" radius="0.8" color="#EF2D5E"></a-sphere><a-cylinder id="cyl1" data-t="a3d" class="clickable" position="1.3 1 -3" radius="0.4" height="1.2" color="#FFC65D"></a-cylinder>
+<a-plane rotation="-90 0 0" position="0 0 -4" width="10" height="10" color="#7BC8A4"></a-plane>
+</a-scene>
+</div><div id="status">Done</div></section>
+<aside class="box"><div class="bar"><select id="tag" title="Tag selector"></select><select id="add"></select><button id="del" title="Remove behavior">−</button><button id="up" title="Move up">▲</button><button id="dn" title="Move down">▼</button></div>
+<div id="list"></div>
+<div class="tabs"><button data-v="log" class="on">Event log</button><button data-v="code">Generated code</button></div><pre id="out"></pre>
+<div class="hint">Click an object on the page to select it. Double-click a behavior to edit its parameters.</div></aside>
+</main>
+<dialog id="dlg"><h3 id="dt" style="margin:0 0 6px"></h3><form id="df" method="dialog"></form><div class="bt"><button form="df" value="cancel">Cancel</button><button form="df" value="ok">OK</button></div></dialog>
+<dialog id="al"><pre id="am"></pre><form method="dialog" class="bt"><button>OK</button></form></dialog>
+<script>
+const $=id=>document.getElementById(id),Q=s=>[...document.querySelectorAll(s)];
+const IMG={gray:'#6b7280',red:'#e5484d',green:'#30a46c',blue:'#3e63dd',gold:'#d98e04',purple:'#8e4ec6'};
+const src=(n,l)=>'data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="110" height="70"><rect width="110" height="70" rx="8" fill="${IMG[n]}"/><text x="55" y="41" font-family="Arial" font-size="15" fill="#fff" text-anchor="middle">${l||n}</text></svg>`);
+['Image1','Image2','Image3'].forEach(i=>$(i).src=src('gray',i));
+const T=[{id:'body',t:'body'},...Q('#page [data-t]').map(e=>({id:e.id,t:e.dataset.t}))];
+const ids=t=>T.filter(x=>x.t==t).map(x=>x.id),tg=id=>T.find(x=>x.id==id),host=id=>id=='body'?$('page'):$(id);
+const LG=[];let B=[],cur='body',selI=-1,tab='log';
+function log(s){LG.unshift(new Date().toLocaleTimeString()+'  '+s);if(LG.length>80)LG.pop();draw()}
+const dwAlert=m=>{$('am').textContent=m;$('al').showModal()};
+function go(u,t='_blank'){log('Go to URL '+u);if(u&&u[0]!='#'){try{window.open(u,t)}catch(e){}}}
+function js(c){try{new Function('event',c)()}catch(e){log('JavaScript error: '+e.message)}}
+let pm,ptm;const hidePm=()=>{clearTimeout(ptm);pm&&pm.remove();pm=null};
+const SW=[],ST=['','show','hide','default'];
+const A={};const L=(a,g,f,r,i)=>A[a]={g,f,r,i};
+L('Call JavaScript','',[['js','JavaScript','a',0,"dwAlert('Hello from Call JavaScript')"]],p=>js(p.js));
+L('Change Property','',[['id','Object','s','all','Layer1'],['prop','Property','s',['style.backgroundColor','style.color','style.width','style.height','style.left','style.top','style.fontSize','style.border','style.opacity','style.visibility','innerHTML','value','className'],'style.backgroundColor'],['val','New value','t',0,'#86efac']],p=>{const ps=p.prop.split('.');let o=host(p.id);while(ps.length>1)o=o[ps.shift()];o[ps[0]]=p.val});
+L('Drag Layer','',[['layer','Layer','s','layer','Layer1'],['ax','Movement','s',['Unconstrained','Horizontal','Vertical'],'Unconstrained'],['tx','Drop target left','n'],['ty','Drop target top','n'],['sn','Snap if within (px)','n',0,40],['j1','JavaScript while dragging','t'],['j2','JavaScript when snapped','t']],p=>{const el=$(p.layer);if(el._d)return;el._d=1;el.style.cursor='move';
+el.onpointerdown=e=>{const sx=e.clientX-el.offsetLeft,sy=e.clientY-el.offsetTop,P=el.parentNode;el.setPointerCapture(e.pointerId);
+el.onpointermove=m=>{let x=m.clientX-sx,y=m.clientY-sy;if(p.ax=='Horizontal')y=el.offsetTop;if(p.ax=='Vertical')x=el.offsetLeft;el.style.left=Math.max(0,Math.min(x,P.clientWidth-el.offsetWidth))+'px';el.style.top=Math.max(0,Math.min(y,P.clientHeight-el.offsetHeight))+'px';p.j1&&js(p.j1)};
+el.onpointerup=()=>{el.onpointermove=null;if(p.tx!==''&&p.ty!==''&&Math.abs(el.offsetLeft-p.tx)<=p.sn&&Math.abs(el.offsetTop-p.ty)<=p.sn){el.style.left=p.tx+'px';el.style.top=p.ty+'px';log('Drag Layer: snapped '+p.layer);p.j2&&js(p.j2)}}};log('Drag Layer: '+p.layer+' is now draggable')});
+L('Go To URL','',[['u','URL','t',0,'https://www.example.com'],['t','Open in','s',['_blank','_self'],'_blank']],p=>go(p.u,p.t));
+L('Hide Pop-Up Menu','',[],hidePm);
+L('Jump Menu','',[['m','Menu','s','select','jump1'],['items','Items (Label|URL per line)','a',0,'Choose one|\nExample|https://example.com\nWikipedia|https://wikipedia.org\nAnchor (log only)|#top'],['t','Open URLs in','s',['_blank','_self'],'_blank'],['f','Select first item after URL change','c',0,true]],p=>{const m=$(p.m);if(m.value)go(m.value,p.t);if(p.f)m.selectedIndex=0},p=>{const m=$(p.m);m.innerHTML='';p.items.split('\n').forEach(l=>{const[a,u]=l.split('|');if(a)m.add(new Option(a,u||''))})});
+L('Jump Menu Go','',[['m','Menu','s','select','jump1'],['t','Open URLs in','s',['_blank','_self'],'_blank']],p=>{go($(p.m).value,p.t)});
+L('Open Popup Window','',[['u','URL','t',0,'https://www.example.com'],['n','Window name','t',0,'dwWin'],['w','Width','n',0,480],['h','Height','n',0,360]],p=>{const f=`popup,width=${p.w},height=${p.h},noopener`;log('Open popup window '+f);window.open(p.u,p.n,f)});
+L('Play Sound','',[['s','Sound URL (blank = built-in tone)','t'],['tone','Built-in tone','s',['Beep','Chime','Buzz'],'Beep']],p=>{if(p.s){new Audio(p.s).play().catch(e=>log('Sound error: '+e.message));return}const C=new(window.AudioContext||webkitAudioContext)(),o=C.createOscillator(),g=C.createGain();o.type={Beep:'sine',Chime:'triangle',Buzz:'sawtooth'}[p.tone];o.frequency.value={Beep:660,Chime:988,Buzz:140}[p.tone];o.connect(g);g.connect(C.destination);g.gain.setValueAtTime(.2,C.currentTime);g.gain.exponentialRampToValueAtTime(.001,C.currentTime+.5);o.start();o.stop(C.currentTime+.5)});
+L('Popup Message','',[['msg','Message','a',0,'Hello World!']],p=>dwAlert(p.msg));
+L('Preload Images','',[['list','Images (names)','t',0,'red green blue gold purple']],p=>{const n=p.list.split(/[\s,]+/).filter(x=>IMG[x]);n.forEach(x=>new Image().src=src(x));log('Preloaded '+n.length+' image(s)')});
+L('Set Nav Bar Image','',[['n','Nav bar button','s','nav','nav1'],['s','State','s',['Up','Over','Down','Over While Down'],'Down']],p=>{const e=$(p.n),c=e.dataset.s;let s=p.s=='Over While Down'?'OverDown':p.s;if(s=='Over'&&/Down/.test(c))s='OverDown';if(s=='Up'&&/Down/.test(c))s=c=='OverDown'?'Down':c;if(s=='Down')Q('.nv').forEach(x=>x.dataset.s='Up');e.dataset.s=s});
+L('Set Text of Layer','Set Text',[['l','Layer','s','layer','Layer1'],['h','New HTML','a',0,'<b>New text</b>']],p=>{$(p.l).innerHTML=p.h});
+L('Set Text of Status Bar','Set Text',[['m','Message','t',0,'Hello from the status bar']],p=>{$('status').textContent=p.m});
+L('Set Text of Text Field','Set Text',[['f','Text field','s','input','fName'],['t','New text','t',0,'Sample text']],p=>{$(p.f).value=p.t});
+L('Show Pop-Up Menu','',[['i','Items (Label|URL per line)','a',0,'Home|#home\nProducts|https://example.com\nContact|#contact'],['d','Direction','s',['Vertical','Horizontal'],'Vertical'],['bg','Background','t',0,'#1e3a8a'],['fg','Text colour','t',0,'#ffffff'],['hb','Highlight background','t',0,'#f59e0b'],['hf','Highlight text','t',0,'#000000']],(p,c)=>{hidePm();const m=document.createElement('div');m.className='pm';m.style.cssText=`background:${p.bg};color:${p.fg};flex-direction:${p.d=='Vertical'?'column':'row'}`;
+p.i.split('\n').filter(Boolean).forEach(l=>{const[a,u]=l.split('|'),d=document.createElement('div');d.textContent=a;d.onmouseover=()=>{d.style.background=p.hb;d.style.color=p.hf};d.onmouseout=()=>{d.style.background='';d.style.color=''};d.onclick=()=>{u?go(u):log('Menu item: '+a);hidePm()};m.append(d)});
+const r=c.el.getBoundingClientRect(),sc=()=>{ptm=setTimeout(hidePm,400)};m.style.left=r.left+'px';m.style.top=r.bottom+'px';document.body.append(m);pm=m;c.el.addEventListener('mouseleave',sc,{once:true});m.onmouseenter=()=>clearTimeout(ptm);m.onmouseleave=sc});
+L('Show-Hide Layers','',ids('layer').map(i=>[i,i,'s',ST,'']),p=>ids('layer').forEach(i=>{const v=p[i];if(v)$(i).style.visibility=v=='show'?'visible':v=='hide'?'hidden':''}));
+L('Swap Image','',[['i','Image','s','img','Image1'],['to','New image','s',Object.keys(IMG),'red'],['pre','Preload images','c',0,true],['rs','Restore images onMouseOut','c',0,true]],p=>{const i=$(p.i);if(!i.dataset.o)i.dataset.o=i.src;if(!SW.includes(i))SW.push(i);i.src=src(p.to,p.i)},p=>{p.pre&&(new Image().src=src(p.to,p.i))});
+L('Swap Image Restore','',[],()=>{SW.forEach(i=>i.src=i.dataset.o);SW.length=0});
+L('Validate Form','',[['r0','Name','s',null,'Anything (required)'],['r1','E-mail','s',null,'E-mail (required)'],['r2','Age','s',null,'Number 1–120 (required)']],(p,c)=>{const e=[];['fName','fEmail','fAge'].forEach((id,i)=>{const rule=p['r'+i],v=$(id).value.trim(),nm=id.slice(1);if(!v){/required/.test(rule)&&e.push(nm+' is required.');return}
+if(/E-mail/.test(rule)){if(!/^\S+@\S+\.\S+$/.test(v))e.push(nm+' must contain an e-mail address.')}else if(/Number/.test(rule)){const n=parseFloat(v);if(!/^-?\d+(\.\d+)?$/.test(v))e.push(nm+' must contain a number.');else if(/1.120/.test(rule)&&(n<1||n>120))e.push(nm+' must contain a number between 1 and 120.')}});
+if(e.length||c.ev=='onSubmit')dwAlert(e.length?'The following error(s) occurred:\n- '+e.join('\n- '):'Form is valid and was submitted.')});
+const RULES=['Anything (optional)','Anything (required)','Number (optional)','Number (required)','E-mail (required)','Number 1–120 (required)'];['r0','r1','r2'].forEach(k=>A['Validate Form'].f.find(x=>x[0]==k)[3]=RULES);
+const ae=e=>{if(!e||!e.emit)throw new Error('A-Frame is still loading or could not load');return e},DYN=[];
+const ATT=['position','rotation','scale','visible','material.color','material.opacity','material.wireframe','material.metalness','material.roughness'];
+const FT={'WebXR (immersive VR)':()=>navigator.xr?navigator.xr.isSessionSupported('immersive-vr'):false,'WebXR (immersive AR)':()=>navigator.xr?navigator.xr.isSessionSupported('immersive-ar'):false,WebGL2:()=>!!document.createElement('canvas').getContext('webgl2'),'Web Audio':()=>!!(window.AudioContext||window.webkitAudioContext),'Service Worker':()=>'serviceWorker' in navigator,Geolocation:()=>'geolocation' in navigator,Vibration:()=>'vibrate' in navigator,Clipboard:()=>!!navigator.clipboard,Fullscreen:()=>!!document.fullscreenEnabled,'Touch input':()=>navigator.maxTouchPoints>0};
+L('Set Entity Attribute','A-Frame',[['e','Entity','s','a3d','box1'],['a','Attribute','s',ATT,'material.color'],['v','Value','t',0,'#ff8800']],p=>{const e=ae($(p.e)),[c,k]=p.a.split('.');k?e.setAttribute(c,k,p.v):e.setAttribute(c,p.v)});
+L('Animate Entity','A-Frame',[['e','Entity','s','a3d','box1'],['pr','Property','s',['position','rotation','scale','material.color','material.opacity'],'rotation'],['to','To','t',0,'0 360 0'],['d','Duration (ms)','n',0,1500],['ea','Easing','s',['linear','easeInOutQuad','easeOutElastic','easeOutBounce','easeInOutSine'],'easeInOutQuad'],['lp','Loop','s',['false','true'],'false'],['dr','Direction','s',['normal','alternate'],'normal']],p=>{const e=ae($(p.e)),o={property:p.pr,to:p.to,dur:+p.d,easing:p.ea,loop:p.lp=='true',dir:p.dr};if(p.pr=='material.color'){o.property='components.material.material.color';o.type='color'}e.removeAttribute('animation__dw');e.setAttribute('animation__dw',o)});
+L('Control Animation','A-Frame',[['e','Entity','s','a3d','box1'],['c','Action','s',['Pause','Resume','Remove'],'Pause']],p=>{const e=ae($(p.e)),a=e.components['animation__dw'];if(p.c=='Remove')e.removeAttribute('animation__dw');else if(a)p.c=='Pause'?a.pause():a.play()});
+L('Emit Event','A-Frame',[['e','Entity','s','a3d','box1'],['n','Event name','t',0,'my-event'],['d','Detail (JSON)','t',0,'{}']],p=>ae($(p.e)).emit(p.n,JSON.parse(p.d||'{}')));
+L('Enter/Exit XR','A-Frame',[['m','Action','s',['Enter VR','Exit VR','Enter AR'],'Enter VR']],p=>{const s=ae($('scene'));Promise.resolve(p.m=='Exit VR'?s.exitVR():p.m=='Enter AR'?s.enterAR():s.enterVR()).catch(e=>log('XR: '+(e&&e.message||e)))});
+L('Create Entity','A-Frame',[['t','Shape','s',['a-box','a-sphere','a-cylinder','a-cone','a-torus','a-octahedron','a-tetrahedron'],'a-sphere'],['c','Colour','t',0,'#a78bfa'],['pos','Position (or random)','t',0,'random'],['cl','Clickable (cursor and controllers can hit it)','c',0,true]],p=>{ae($('scene'));const n=document.createElement(p.t),r=()=>Math.random(),pos=p.pos=='random'?[(r()*4-2).toFixed(1),(1+r()*2).toFixed(1),(-2-r()*3).toFixed(1)].join(' '):p.pos;n.setAttribute('color',p.c);n.setAttribute('position',pos);n.setAttribute('scale','0.5 0.5 0.5');p.cl&&n.classList.add('clickable');$('scene').append(n);DYN.push(n);log('Created '+p.t+' at '+pos)});
+L('Remove Created Entities','A-Frame',[],()=>{DYN.forEach(n=>n.remove());log('Removed '+DYN.length+' shape(s)');DYN.length=0});
+L('Drag Entity (3D)','A-Frame',[['e','Entity','s','a3d','box1'],['m','Movement','s',['Camera plane','Floor (X/Z)','Vertical (Y)'],'Camera plane']],p=>{const el=ae($(p.e));if(el._d)return;el._d=1;const sc=$('scene'),H=AFRAME.THREE,rc=new H.Raycaster(),pl=new H.Plane(),pt=new H.Vector3(),nv=new H.Vector3(),nd=new H.Vector2(),off=new H.Vector3();let on=0;
+el.addEventListener('mousedown',e=>{const o=el.object3D.position,ip=e.detail&&e.detail.intersection;if(p.m=='Floor (X/Z)')nv.set(0,1,0);else{sc.camera.getWorldDirection(nv);if(p.m=='Vertical (Y)'){nv.y=0;nv.normalize()}}pl.setFromNormalAndCoplanarPoint(nv,o);off.copy(ip?ip.point:o).sub(o);on=1;sc.camera.el.setAttribute('look-controls','enabled',false)});
+addEventListener('pointermove',m=>{if(!on)return;const r=sc.canvas.getBoundingClientRect();nd.set((m.clientX-r.left)/r.width*2-1,1-(m.clientY-r.top)/r.height*2);rc.setFromCamera(nd,sc.camera);if(!rc.ray.intersectPlane(pl,pt))return;pt.sub(off);const o=el.object3D.position;el.setAttribute('position',{x:p.m=='Vertical (Y)'?o.x:pt.x,y:p.m=='Floor (X/Z)'?o.y:pt.y,z:p.m=='Vertical (Y)'?o.z:pt.z})});
+addEventListener('pointerup',()=>{if(!on)return;on=0;const c=sc.camera.el;c.setAttribute('look-controls','enabled',true);const lc=c.components['look-controls'];lc&&lc.onMouseUp&&lc.onMouseUp()});log('Drag Entity: '+p.e+' can now be dragged')});
+L('Check Feature','Modern Web',[['f','Feature','s',Object.keys(FT),'WebXR (immersive VR)'],['u1','If supported, go to URL','t'],['u2','Otherwise, go to URL','t']],async p=>{let ok=false;try{ok=!!await FT[p.f]()}catch(e){}log('Check Feature: '+p.f+(ok?' supported':' not supported'));const u=ok?p.u1:p.u2;u?go(u):dwAlert(p.f+(ok?' is supported.':' is not supported here.'))});
+L('Toggle Fullscreen','Modern Web',[['e','Element','s','all','scene']],p=>{const e=host(p.e);Promise.resolve(document.fullscreenElement?document.exitFullscreen():e.requestFullscreen()).catch(x=>log('Fullscreen blocked: '+x.message))});
+L('Copy to Clipboard','Modern Web',[['t','Text','a',0,'Copied from the Behaviors Workbench']],p=>navigator.clipboard.writeText(p.t).then(()=>log('Copied to clipboard')).catch(e=>log('Clipboard blocked: '+e.message)));
+L('Vibrate','Modern Web',[['ms','Pattern (ms, comma separated)','t',0,'200,100,200']],p=>navigator.vibrate?navigator.vibrate(p.ms.split(',').map(Number)):log('Vibration is not supported here'));
+L('Speak Text','Modern Web',[['t','Text','a',0,'Hello from the Behaviors Workbench']],p=>speechSynthesis.speak(new SpeechSynthesisUtterance(p.t)));
+L('Share','Modern Web',[['ti','Title','t',0,'Behaviors Workbench'],['t','Text','t',0,'Try this'],['u','URL','t',0,'https://aframe.io']],p=>navigator.share?navigator.share({title:p.ti,text:p.t,url:p.u}).catch(e=>log('Share: '+e.message)):log('Web Share is not supported here'));
+L('Animate Element','Modern Web',[['e','Element','s','all','Layer3'],['pr','Property','s',['transform','opacity','backgroundColor','width','height','left','top'],'transform'],['to','To','t',0,'translateX(240px) rotate(10deg)'],['d','Duration (ms)','n',0,1200],['ea','Easing','s',['linear','ease','ease-in-out','cubic-bezier(.34,1.56,.64,1)'],'ease-in-out'],['it','Iterations','n',0,2],['dr','Direction','s',['normal','alternate'],'alternate']],p=>{host(p.e).animate({[p.pr]:p.to},{duration:+p.d,easing:p.ea,iterations:+p.it||1,direction:p.dr,fill:'forwards'})});
+L('Stop Animations','Modern Web',[['e','Element','s','all','Layer3']],p=>host(p.e).getAnimations().forEach(a=>a.cancel()));
+const MS=['onClick','onDblClick','onMouseDown','onMouseUp','onMouseOver','onMouseOut','onMouseMove'],KY=['onKeyDown','onKeyUp'];
+const PT=['onPointerDown','onPointerUp','onTouchStart','onTouchEnd','onWheel','onContextMenu'],A3=['onClick','onMouseDown','onMouseUp','onMouseEnter','onMouseLeave','onFusing','onRaycasterIntersected','onIntersectionCleared','onAnimationComplete'];
+const EV=id=>({body:['onLoad','onUnload','onResize','onScroll','onVisibilityChange','onOnline','onOffline',...MS,...KY,...PT],input:['onFocus','onBlur','onChange','onSelect',...KY,...MS],select:['onFocus','onBlur','onChange',...MS,...KY],form:['onSubmit','onReset',...MS,...KY],a3d:A3,ascene:['onSceneLoaded','onEnterVR','onExitVR','onClick'],ahand:['onTriggerDown','onTriggerUp','onGripDown','onGripUp','onAButtonDown','onBButtonDown','onThumbstickMoved']})[tg(id).t]||[...MS,...KY,...PT,'onFocus','onBlur'];
+function fire(id,ev,e){B.filter(b=>b.id==id&&b.ev==ev).forEach(b=>{log(ev+'  '+id+'  →  '+b.a);try{A[b.a].r(b.p,{el:host(id),e,ev})}catch(x){log('Error: '+x.message)}})}
+const DN=ev=>({onRaycasterIntersected:'raycaster-intersected',onIntersectionCleared:'raycaster-intersected-cleared',onTriggerDown:'triggerdown',onTriggerUp:'triggerup',onGripDown:'gripdown',onGripUp:'gripup',onAButtonDown:'abuttondown',onBButtonDown:'bbuttondown',onThumbstickMoved:'thumbstickmoved',onEnterVR:'enter-vr',onExitVR:'exit-vr',onSceneLoaded:'loaded'})[ev]||ev.slice(2).toLowerCase();
+T.forEach(({id,t})=>{const h=host(id);if(!/body|input|select|button|link|^a/.test(t))h.tabIndex=0;EV(id).forEach(ev=>{const n=DN(ev);if(id=='body'&&/^(load|unload|resize|scroll|visibilitychange|online|offline)$/.test(n))return;(id=='body'&&/key/.test(n)?document:h).addEventListener(n,e=>{if(n=='loaded'&&e.target!==h)return;fire(id,ev,e)})})});
+addEventListener('resize',()=>fire('body','onResize'));addEventListener('scroll',()=>fire('body','onScroll'));addEventListener('pagehide',()=>fire('body','onUnload'));document.addEventListener('visibilitychange',()=>fire('body','onVisibilityChange'));addEventListener('online',()=>fire('body','onOnline'));addEventListener('offline',()=>fire('body','onOffline'));
+$('page').addEventListener('click',e=>{const t=e.target.closest('[data-t]');if(t)sel(t.id)},true);
+function ask(a,p0,cb){const d=$('dlg'),def=A[a],f=$('df');$('dt').textContent=a;f.innerHTML=def.f.length?'':'<p class="hint">This behavior has no parameters.</p>';
+def.f.forEach(([k,l,t,o,v])=>{const w=document.createElement('label');w.append(l);let c;
+if(t=='s'){c=document.createElement('select');(typeof o=='string'?(o=='all'?T.map(x=>x.id):ids(o)):o).forEach(x=>c.add(new Option(x||'(leave as is)',x)))}
+else if(t=='a'){c=document.createElement('textarea');c.rows=3}else{c=document.createElement('input');c.type=t=='c'?'checkbox':t=='n'?'number':'text'}
+c.name=k;const val=p0&&k in p0?p0[k]:v;if(t=='c')c.checked=!!val;else c.value=val??'';w.append(c);f.append(w)});
+d.onclose=()=>{if(d.returnValue!='ok')return;const p={};def.f.forEach(([k,,t])=>{const c=f.elements[k];p[k]=t=='c'?c.checked:t=='n'&&c.value!==''?+c.value:c.value});cb(p)};d.returnValue='';d.showModal()}
+function push(id,ev,a,p){A[a].i&&A[a].i(p);const q={...p};delete q.rs;B.push({id,ev,a,p:a=='Swap Image'?q:p});if(a=='Swap Image'&&p.rs)B.push({id,ev:'onMouseOut',a:'Swap Image Restore',p:{}});draw()}
+const defEv=(id,a)=>{const t=tg(id).t;return t=='ascene'?'onSceneLoaded':t=='ahand'?'onTriggerDown':t=='body'?'onLoad':t=='form'?'onSubmit':t=='select'?'onChange':/Swap Image$|Show Pop/.test(a)?'onMouseOver':'onClick'};
+const code=b=>b.id+'  '+b.ev+'="MM_'+b.a.replace(/\W+/g,'')+'('+Object.values(b.p).map(v=>"'"+String(v).replace(/\n/g,'\\n').replace(/'/g,"\\'")+"'").join(',')+')"';
+function sel(id){cur=id;selI=-1;draw()}
+function draw(){$('tag').value=cur;const L2=$('list');L2.innerHTML='';let n=0;
+B.forEach((b,i)=>{if(b.id!=cur)return;n++;const r=document.createElement('div');r.className='r'+(i==selI?' on':'');const s=document.createElement('select');EV(cur).forEach(e=>s.add(new Option(e,e)));s.value=b.ev;s.onchange=()=>{b.ev=s.value;draw()};s.onclick=e=>e.stopPropagation();const sp=document.createElement('span');sp.textContent=b.a;r.append(s,sp);r.onclick=()=>{selI=i;draw()};r.ondblclick=()=>ask(b.a,b.p,p=>{b.p=p;A[b.a].i&&A[b.a].i(p);draw()});L2.append(r)});
+if(!n)L2.innerHTML='<p class="hint">No behaviors on this object. Choose one from the add menu.</p>';
+$('out').textContent=tab=='log'?LG.join('\n'):B.map(code).join('\n')||'No behaviors yet.'}
+$('tag').innerHTML=T.map(x=>`<option value="${x.id}">&lt;${x.id}&gt; ${x.t}</option>`).join('');$('tag').onchange=e=>sel(e.target.value);
+const gs={};Object.keys(A).forEach(a=>(gs[A[a].g]=gs[A[a].g]||[]).push(a));
+$('add').innerHTML='<option value="">＋ Add behavior</option>'+Object.keys(gs).map(g=>g?`<optgroup label="${g}">${gs[g].map(a=>`<option>${a}</option>`).join('')}</optgroup>`:gs[g].map(a=>`<option>${a}</option>`).join('')).join('');
+$('add').onchange=e=>{const a=e.target.value;e.target.value='';if(a)ask(a,null,p=>push(cur,defEv(cur,a),a,p))};
+$('del').onclick=()=>{if(selI>=0){B.splice(selI,1);selI=-1;draw()}};
+const mv=d=>{if(selI<0)return;let j=selI+d;while(B[j]&&B[j].id!=cur)j+=d;if(!B[j])return;[B[selI],B[j]]=[B[j],B[selI]];selI=j;draw()};$('up').onclick=()=>mv(-1);$('dn').onclick=()=>mv(1);
+Q('.tabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.v;Q('.tabs button').forEach(x=>x.classList.toggle('on',x==b));draw()});
+$('bl').onclick=()=>fire('body','onLoad');$('bu').onclick=()=>fire('body','onUnload');$('cl').onclick=()=>{LG.length=0;draw()};
+const D=(id,ev,a,o)=>{const p={};A[a].f.forEach(([k,,,,v])=>p[k]=v);push(id,ev,a,Object.assign(p,o))};
+D('body','onLoad','Set Text of Status Bar',{m:'Welcome: hover, click, double-click and drag things on the page'});
+D('body','onLoad','Drag Layer',{layer:'Layer1'});D('body','onLoad','Drag Layer',{layer:'Layer2',ax:'Horizontal'});
+D('Image1','onMouseOver','Swap Image');D('Image2','onClick','Popup Message',{msg:'Hello from Image2!'});
+D('Image3','onMouseOver','Show-Hide Layers',{Layer2:'hide'});D('Image3','onMouseOut','Show-Hide Layers',{Layer2:'show'});
+D('link1','onMouseOver','Show Pop-Up Menu');
+D('btn1','onClick','Set Text of Layer',{l:'Layer1',h:'<b>Button1 clicked</b>'});D('btn1','onClick','Set Text of Text Field');
+['nav1','nav2','nav3'].forEach(n=>{D(n,'onMouseOver','Set Nav Bar Image',{n,s:'Over'});D(n,'onMouseOut','Set Nav Bar Image',{n,s:'Up'});D(n,'onClick','Set Nav Bar Image',{n,s:'Down'})});
+D('jump1','onChange','Jump Menu');D('go1','onClick','Jump Menu Go');D('form1','onSubmit','Validate Form');
+
+D('Layer2','onDblClick','Play Sound',{tone:'Chime'});D('Layer3','onClick','Animate Element');D('Layer3','onDblClick','Stop Animations');
+D('scene','onSceneLoaded','Set Text of Status Bar',{m:'A-Frame scene ready: hover, click or drag the 3D shapes'});D('scene','onSceneLoaded','Drag Entity (3D)',{e:'box1'});
+D('box1','onMouseEnter','Set Entity Attribute',{e:'box1',a:'material.color',v:'#ffd166'});D('box1','onMouseLeave','Set Entity Attribute',{e:'box1',a:'material.color',v:'#4CC3D9'});
+D('sphere1','onClick','Animate Entity',{e:'sphere1',pr:'material.color',to:'#06d6a0',d:700});D('cyl1','onClick','Animate Entity',{e:'cyl1',pr:'rotation',to:'0 360 0',d:1500});
+D('rHand','onTriggerDown','Create Entity');D('rHand','onGripDown','Remove Created Entities');D('lHand','onTriggerDown','Animate Entity',{e:'box1',pr:'scale',to:'1.5 1.5 1.5',d:500,dr:'alternate'});
+D('vrBtn','onClick','Enter/Exit XR');D('mkBtn','onClick','Create Entity');D('rmBtn','onClick','Remove Created Entities');D('fsBtn','onClick','Toggle Fullscreen');D('nav3','onDblClick','Check Feature',{f:'WebGL2'});
+function loadAF(v,fb){const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/aframe@'+v+'/dist/aframe.min.js';s.onload=()=>log('A-Frame '+AFRAME.version+' loaded');s.onerror=()=>fb?loadAF(fb):log('A-Frame could not load (needs cdn.jsdelivr.net)');document.head.append(s)}loadAF('1.8.0','1.7.0');
+cur='Image1';fire('body','onLoad');draw();
+</script></body></html>

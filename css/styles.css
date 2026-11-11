@@ -411,6 +411,57 @@ canvas {
     height: calc(100vh - var(--header-height));
 }
 
+.right-panel-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 8px 8px 0;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.right-tab {
+    flex: 1;
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-bottom: none;
+    color: var(--text-secondary);
+    padding: 7px 6px;
+    border-radius: 4px 4px 0 0;
+    cursor: pointer;
+    font-size: 0.72rem;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.right-tab:hover {
+    background: var(--bg-medium);
+    color: var(--text-primary);
+}
+
+.right-tab.active {
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+    border-bottom: 1px solid var(--bg-dark);
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.right-panel-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+}
+
+.right-tab-content {
+    display: none;
+}
+
+.right-tab-content.active {
+    display: block;
+}
+
 /* Layers Container */
 .layers-container {
     flex: 1;
@@ -1790,4 +1841,16 @@ input[type="color"] {
 
 .doc-example code {
     font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+}
+
+/* Tabbed right panel: let the shared panel scroller handle overflow. */
+.right-tab-content .panel-content,
+.right-tab-content .props-scrollable {
+    max-height: none;
+    overflow: visible;
+}
+
+.right-tab-content .layers-container {
+    max-height: none;
+    overflow: visible;
 }

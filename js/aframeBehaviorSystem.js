@@ -1,3 +1,4 @@
+import { DREAMWEAVER_BEHAVIORS } from './aframeDreamweaverBehaviors.js';
 import { getComponentData } from './aframeUtils.js';
 
 const number = (value, fallback = 0) => {
@@ -392,6 +393,9 @@ function paramsAxis(value) {
     return value === 'x' ? 'x' : 'z';
 }
 
+// Merge the Dreamweaver-inspired behaviour set into the main library.
+Object.assign(BEHAVIOR_LIBRARY, DREAMWEAVER_BEHAVIORS);
+
 export const BEHAVIOR_PRESETS = {
     'door': {
         label: 'Door Preset',
@@ -457,6 +461,7 @@ export class AFrameBehaviorSystem {
             type,
             params: { ...params },
             attrs: result.attrs || [],
+            external: result.external || [],
             actions: !!result.actions
         };
 
@@ -474,6 +479,11 @@ export class AFrameBehaviorSystem {
 
         (record.attrs || []).forEach(attr => {
             if (attr && entity.hasAttribute(attr)) entity.removeAttribute(attr);
+        });
+
+        (record.external || []).forEach(item => {
+            const target = item.selector ? document.querySelector(item.selector) : entity;
+            if (target && item.attr && target.hasAttribute(item.attr)) target.removeAttribute(item.attr);
         });
 
         if (record.actions) removeAction(entity, id);

@@ -32,6 +32,7 @@ export class UI {
         this.loadSettings();
         this.activeSubmenu = null; // Track currently open submenu
         this.setupPanelTabs();
+        this.setupRightTabs();
 
         // Submenus are positioned in viewport coordinates, so close them when
         // the toolbar or viewport moves.
@@ -556,437 +557,58 @@ export class UI {
         this.showNotification('Scene settings applied successfully!', 'success');
     }
 
-    toggleMaterialsView() {
-        const materialsSection = document.getElementById('materials-section');
-        const sceneSection = document.getElementById('scene-section');
-        const assetsSection = document.getElementById('assets-section');
-        const propsContent = document.getElementById('props-content');
-        const layersList = document.getElementById('layers-list');
+    setupRightTabs() {
+        document.querySelectorAll('.right-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                this.switchRightTab(tab.dataset.rightTab);
+            });
+        });
+    }
 
-        if (materialsSection && sceneSection && propsContent && layersList) {
-            const isMaterialsVisible = materialsSection.style.display !== 'none';
+    switchRightTab(tabId) {
+        if (!tabId) return;
 
-            if (isMaterialsVisible) {
-                this.resetPanelToDefault();
-            } else {
-                materialsSection.style.display = 'flex';
-                sceneSection.style.display = 'none';
-                if (assetsSection) assetsSection.style.display = 'none';
-                propsContent.style.display = 'none';
-                layersList.style.display = 'none';
-                document.querySelectorAll('.panel-header').forEach(header => {
-                    header.style.display = 'none';
-                });
-                materialsSection.querySelectorAll('.panel-header').forEach(header => {
-                    header.style.display = 'flex';
-                });
-            }
+        document.querySelectorAll('.right-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.rightTab === tabId);
+        });
+        document.querySelectorAll('.right-tab-content').forEach(content => {
+            content.classList.toggle('active', content.id === 'tab-' + tabId);
+        });
 
-            // Update materials content
-            if (this.app.materialsManager) {
-                this.app.materialsManager.renderMaterialsSection();
-            }
+        // Keep the inner section visible when returning to a tab after another
+        // view has hidden it.
+        if (tabId === 'hierarchy') {
+            const layers = document.getElementById('layers-list');
+            if (layers) layers.style.display = 'block';
+        } else if (tabId === 'properties') {
+            const props = document.getElementById('props-content');
+            if (props) props.style.display = 'block';
+        } else if (tabId === 'assets') {
+            const assets = document.getElementById('assets-section');
+            if (assets) assets.style.display = 'flex';
+            this.renderAssetsSection();
+        } else if (tabId === 'scene') {
+            const scene = document.getElementById('scene-section');
+            if (scene) scene.style.display = 'block';
+            this.initSceneExport();
         }
+    }
+
+    toggleMaterialsView() {
+        this.assetTab = 'materials';
+        this.switchRightTab('assets');
     }
 
     toggleAssetsView() {
-        const assetsSection = document.getElementById('assets-section');
-        const sceneSection = document.getElementById('scene-section');
-        const materialsSection = document.getElementById('materials-section');
-        const propsContent = document.getElementById('props-content');
-        const layersList = document.getElementById('layers-list');
-
-        if (!assetsSection) return;
-
-        const isAssetsVisible = assetsSection.style.display !== 'none';
-        if (isAssetsVisible) {
-            this.resetPanelToDefault();
-            return;
-        }
-
-        assetsSection.style.display = 'flex';
-        if (sceneSection) sceneSection.style.display = 'none';
-        if (materialsSection) materialsSection.style.display = 'none';
-        if (propsContent) propsContent.style.display = 'none';
-        if (layersList) layersList.style.display = 'none';
-
-        document.querySelectorAll('.panel-header').forEach(header => {
-            header.style.display = 'none';
-        });
-        assetsSection.querySelectorAll('.panel-header').forEach(header => {
-            header.style.display = 'flex';
-        });
-
-        this.renderAssetsSection();
+        this.switchRightTab('assets');
     }
 
-    renderAssetsSection() {
-        const container = document.getElementById('assets-content');
-        const assetSystem = this.app.assetSystem;
-        if (!container) return;
-        if (!assetSystem) {
-            container.innerHTML = '<div class="empty-state">Asset system is not available.</div>';
-            return;
-        }
+    toggleSceneView() {
+        this.switchRightTab('scene');
+    }
 
-        this.assetTab = this.assetTab || 'all';
-        this.assetSearch = this.assetSearch || '';
-
-        container.innerHTML = '';
-
-        const tabs = [
-            { id: 'all', label: 'All', icon: 'fa-layer-group', types: ['image', 'panorama', 'video', 'audio', 'model'] },
-            { id: 'images', label: 'Images', icon: 'fa-image', types: ['image', 'panorama'] },
-            { id: 'media', label: 'Media', icon: 'fa-video', types: ['video'] },
-            { id: 'audio', label: 'Audio', icon: 'fa-volume-up', types: ['audio'] },
-            { id: 'models', label: 'Models', icon: 'fa-cubes', types: ['model'] },
-            { id: 'mixins', label: 'Mixins', icon: 'fa-clone', types: [] },
-            { id: 'materials', label: 'Materials', icon: 'fa-palette', types: [] }
-        ];
-
-        const tabBar = document.createElement('div');
-        tabBar.className = 'assets-tabs';
-        tabs.forEach(tab => {
-            const button = document.createElement('button');
-            button.className = 'asset-tab' + (this.assetTab === tab.id ? ' active' : '');
-            button.dataset.assetTab = tab.id;
-            button.innerHTML = `<i class="fas ${tab.icon}"></i> ${tab.label}`;
-            button.addEventListener('click', () => {
-                this.assetTab = tab.id;
-                this.renderAssetsSection();
-            });
-            tabBar.appendChild(button);
-        });
-        container.appendChild(tabBar);
-
-        const searchWrap = document.createElement('div');
-        searchWrap.className = 'asset-search';
-        const searchInput = document.createElement('input');
-        searchInput.type = 'text';
-        searchInput.placeholder = 'Search assets...';
-        searchInput.value = this.assetSearch;
-        searchWrap.appendChild(searchInput);
-        container.appendChild(searchWrap);
-
-        let renderList = () => {};
-
-        if (!['materials', 'mixins'].includes(this.assetTab)) {
-            const currentTab = tabs.find(tab => tab.id === this.assetTab) || tabs[0];
-            const tabLabel = currentTab.id === 'all' ? 'Assets' : currentTab.label;
-
-            // Add asset form
-            const form = document.createElement('div');
-            form.className = 'property-group asset-add-form';
-            const typeOptions = this.assetTab === 'all'
-                ? '<option value="image">Image</option><option value="panorama">360 Panorama</option><option value="video">Video</option><option value="audio">Audio</option><option value="model">3D Model (.glb / .gltf)</option>'
-                : this.assetTab === 'images'
-                    ? '<option value="image">Image</option><option value="panorama">360 Panorama</option>'
-                    : this.assetTab === 'media'
-                        ? '<option value="video">Video</option>'
-                        : this.assetTab === 'audio'
-                            ? '<option value="audio">Audio</option>'
-                            : '<option value="model">3D Model (.glb / .gltf)</option>';
-
-            form.innerHTML = `
-                <div class="property-label">Add ${tabLabel}</div>
-                <div class="input-group"><span>Name</span><input type="text" class="asset-name" placeholder="My asset"></div>
-                <div class="input-group"><span>Type</span><select class="component-select asset-type">${typeOptions}</select></div>
-                <div class="input-group"><span>URL</span><input type="text" class="asset-url" placeholder="https://..."></div>
-                <input type="file" class="asset-file" style="display:none">
-                <button class="btn asset-file-btn" style="width:100%; margin-top:5px;"><i class="fas fa-folder-open"></i> Choose File</button>
-                <button class="btn primary asset-add-btn" style="width:100%; margin-top:5px;"><i class="fas fa-plus"></i> Add Asset</button>
-            `;
-
-            const fileInput = form.querySelector('.asset-file');
-            fileInput.accept = this.assetTab === 'all' ? ''
-                : this.assetTab === 'audio' ? 'audio/*'
-                : this.assetTab === 'media' ? 'video/*'
-                : this.assetTab === 'models' ? '.glb,.gltf'
-                : 'image/*';
-            form.querySelector('.asset-file-btn').addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', () => {
-                const file = fileInput.files && fileInput.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = () => {
-                    form.querySelector('.asset-url').value = reader.result;
-                    if (!form.querySelector('.asset-name').value) {
-                        form.querySelector('.asset-name').value = file.name;
-                    }
-                };
-                reader.readAsDataURL(file);
-            });
-
-            form.querySelector('.asset-add-btn').addEventListener('click', () => {
-                const src = form.querySelector('.asset-url').value.trim();
-                const name = form.querySelector('.asset-name').value.trim();
-                const type = form.querySelector('.asset-type').value;
-                if (!src) {
-                    this.showNotification('Enter an asset URL or choose a file first.', 'error');
-                    return;
-                }
-                assetSystem.addAsset({ name, type, src });
-                this.renderAssetsSection();
-                this.showNotification(`Asset "${name || type}" added`, 'success');
-            });
-
-            container.appendChild(form);
-
-            const listContainer = document.createElement('div');
-            listContainer.className = 'assets-list';
-            container.appendChild(listContainer);
-
-            renderList = () => {
-                listContainer.innerHTML = '';
-                const query = this.assetSearch.toLowerCase();
-                const assets = assetSystem.getAssets().filter(asset => {
-                    if (!currentTab.types.includes(asset.type)) return false;
-                    if (!query) return true;
-                    return `${asset.name} ${asset.type} ${asset.id}`.toLowerCase().includes(query);
-                });
-
-                if (assets.length === 0) {
-                    const empty = document.createElement('div');
-                    empty.className = 'empty-state';
-                    empty.innerHTML = `<p>No ${tabLabel.toLowerCase()} yet.</p><p>Add a URL or choose a file above.</p>`;
-                    listContainer.appendChild(empty);
-                    return;
-                }
-
-                assets.forEach(asset => {
-                    const row = document.createElement('div');
-                    row.className = 'material-item';
-                    row.style.alignItems = 'center';
-
-                    const preview = document.createElement('div');
-                    preview.className = 'material-preview';
-                    if (asset.type === 'image' || asset.type === 'panorama') {
-                        preview.style.backgroundImage = `url("${asset.src}")`;
-                        preview.style.backgroundSize = 'cover';
-                        preview.style.backgroundPosition = 'center';
-                    } else {
-                        const icons = { video: 'fa-video', audio: 'fa-volume-up', model: 'fa-cubes' };
-                        preview.innerHTML = `<i class="fas ${icons[asset.type] || 'fa-file'}" style="display:flex;align-items:center;justify-content:center;height:100%;"></i>`;
-                    }
-                    preview.title = asset.name;
-
-                    const info = document.createElement('div');
-                    info.className = 'material-info';
-                    info.innerHTML = `<div style="font-size:0.75rem; color:var(--text-primary); font-weight:bold;">${asset.name}</div><div style="font-size:0.65rem; color:var(--text-secondary);">${asset.type} · #${asset.id}</div>`;
-
-                    const actions = document.createElement('div');
-                    actions.className = 'material-actions';
-
-                    const placeBtn = document.createElement('button');
-                    placeBtn.className = 'btn icon-only';
-                    placeBtn.title = 'Place in scene';
-                    placeBtn.innerHTML = '<i class="fas fa-plus"></i>';
-                    placeBtn.addEventListener('click', () => assetSystem.addAssetToScene(asset.id));
-
-                    const applyBtn = document.createElement('button');
-                    applyBtn.className = 'btn icon-only';
-                    applyBtn.title = 'Use on selected element';
-                    applyBtn.innerHTML = '<i class="fas fa-check"></i>';
-                    applyBtn.addEventListener('click', () => {
-                        if (!assetSystem.applyAssetToSelected(asset.id)) {
-                            this.showNotification('Select an A-Frame element first.', 'info');
-                        }
-                    });
-
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'btn icon-only';
-                    deleteBtn.title = 'Delete asset';
-                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
-                    deleteBtn.addEventListener('click', () => {
-                        if (!window.confirm(`Delete asset "${asset.name}"?`)) return;
-                        assetSystem.removeAsset(asset.id);
-                        this.renderAssetsSection();
-                    });
-
-                    actions.appendChild(placeBtn);
-                    actions.appendChild(applyBtn);
-                    actions.appendChild(deleteBtn);
-
-                    row.appendChild(preview);
-                    row.appendChild(info);
-                    row.appendChild(actions);
-                    listContainer.appendChild(row);
-                });
-            };
-        } else if (this.assetTab === 'mixins') {
-            const mixinSystem = this.app.mixinSystem;
-            const form = document.createElement('div');
-            form.className = 'property-group asset-add-form';
-            form.innerHTML = `
-                <div class="property-label">Mixins</div>
-                <button class="btn primary" style="width:100%;"><i class="fas fa-clone"></i> Create Mixin from Selected Element</button>
-            `;
-            form.querySelector('button').addEventListener('click', () => {
-                const selected = this.app.aframeManager?.getSelectedEntity?.();
-                if (!selected) {
-                    this.showNotification('Select an A-Frame element first.', 'info');
-                    return;
-                }
-                const name = window.prompt('Mixin name:', selected.id ? selected.id + ' Mixin' : 'New Mixin');
-                if (!name) return;
-                mixinSystem?.createFromElement(selected, name);
-                this.renderAssetsSection();
-                this.showNotification(`Mixin "${name}" saved as an asset`, 'success');
-            });
-            container.appendChild(form);
-
-            const listContainer = document.createElement('div');
-            listContainer.className = 'assets-list';
-            container.appendChild(listContainer);
-
-            renderList = () => {
-                listContainer.innerHTML = '';
-                const query = this.assetSearch.toLowerCase();
-                const mixins = (mixinSystem?.getMixins() || []).filter(mixin => {
-                    if (!query) return true;
-                    return `${mixin.name} ${mixin.id}`.toLowerCase().includes(query);
-                });
-
-                if (mixins.length === 0) {
-                    const empty = document.createElement('div');
-                    empty.className = 'empty-state';
-                    empty.innerHTML = '<p>No mixins yet.</p><p>Select an element and save its components as a reusable mixin.</p>';
-                    listContainer.appendChild(empty);
-                    return;
-                }
-
-                mixins.forEach(mixin => {
-                    const row = document.createElement('div');
-                    row.className = 'material-item';
-                    row.style.alignItems = 'center';
-
-                    const preview = document.createElement('div');
-                    preview.className = 'material-preview';
-                    preview.innerHTML = '<i class="fas fa-clone" style="display:flex;align-items:center;justify-content:center;height:100%;"></i>';
-
-                    const componentNames = Object.keys(mixin.components || {});
-                    const info = document.createElement('div');
-                    info.className = 'material-info';
-                    info.innerHTML = `<div style="font-size:0.75rem; color:var(--text-primary); font-weight:bold;">${mixin.name}</div><div style="font-size:0.65rem; color:var(--text-secondary);">${componentNames.length ? componentNames.join(', ') : 'No components'} · #${mixin.id}</div>`;
-
-                    const actions = document.createElement('div');
-                    actions.className = 'material-actions';
-
-                    const applyBtn = document.createElement('button');
-                    applyBtn.className = 'btn icon-only';
-                    applyBtn.title = 'Apply mixin to selected element';
-                    applyBtn.innerHTML = '<i class="fas fa-check"></i>';
-                    applyBtn.addEventListener('click', () => {
-                        const selected = this.app.aframeManager?.getSelectedEntity?.();
-                        if (!selected) {
-                            this.showNotification('Select an A-Frame element first.', 'info');
-                            return;
-                        }
-                        mixinSystem.applyToElement(selected, mixin.id);
-                        this.renderAFramePropertiesPanel(selected);
-                    });
-
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'btn icon-only';
-                    deleteBtn.title = 'Delete mixin';
-                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
-                    deleteBtn.addEventListener('click', () => {
-                        if (!window.confirm(`Delete mixin "${mixin.name}"?`)) return;
-                        mixinSystem.deleteMixin(mixin.id);
-                        this.renderAssetsSection();
-                    });
-
-                    actions.appendChild(applyBtn);
-                    actions.appendChild(deleteBtn);
-                    row.appendChild(preview);
-                    row.appendChild(info);
-                    row.appendChild(actions);
-                    listContainer.appendChild(row);
-                });
-            };
-        } else {
-            // Materials are managed by the existing MaterialsManager but exposed
-            // here beside media assets, matching the Pixel 3D asset library.
-            const materialsManager = this.app.materialsManager;
-            const form = document.createElement('div');
-            form.className = 'property-group asset-add-form';
-            form.innerHTML = `
-                <div class="property-label">Materials</div>
-                <button class="btn primary" style="width:100%;"><i class="fas fa-plus"></i> Create Material</button>
-            `;
-            form.querySelector('button').addEventListener('click', () => {
-                if (materialsManager) materialsManager.createNewMaterial();
-            });
-            container.appendChild(form);
-
-            const listContainer = document.createElement('div');
-            listContainer.className = 'assets-list';
-            container.appendChild(listContainer);
-
-            renderList = () => {
-                listContainer.innerHTML = '';
-                const query = this.assetSearch.toLowerCase();
-                const materials = (materialsManager?.materials || []).filter(material => {
-                    if (!query) return true;
-                    return `${material.name} ${material.id}`.toLowerCase().includes(query);
-                });
-
-                if (materials.length === 0) {
-                    const empty = document.createElement('div');
-                    empty.className = 'empty-state';
-                    empty.textContent = 'No materials yet. Create one to reuse it across elements.';
-                    listContainer.appendChild(empty);
-                    return;
-                }
-
-                materials.forEach(material => {
-                    const row = document.createElement('div');
-                    row.className = 'material-item';
-                    row.style.alignItems = 'center';
-
-                    const preview = document.createElement('div');
-                    preview.className = 'material-preview';
-                    preview.style.backgroundColor = '#' + material.color.toString(16).padStart(6, '0');
-
-                    const info = document.createElement('div');
-                    info.className = 'material-info';
-                    info.innerHTML = `<div style="font-size:0.75rem; color:var(--text-primary); font-weight:bold;">${material.name}</div><div style="font-size:0.65rem; color:var(--text-secondary);">M: ${material.metalness.toFixed(2)} · R: ${material.roughness.toFixed(2)}</div>`;
-
-                    const actions = document.createElement('div');
-                    actions.className = 'material-actions';
-
-                    const applyBtn = document.createElement('button');
-                    applyBtn.className = 'btn icon-only';
-                    applyBtn.title = 'Apply to selected element';
-                    applyBtn.innerHTML = '<i class="fas fa-check"></i>';
-                    applyBtn.addEventListener('click', () => {
-                        materialsManager?.applyMaterialToSelected(material);
-                    });
-
-                    const editBtn = document.createElement('button');
-                    editBtn.className = 'btn icon-only';
-                    editBtn.title = 'Edit material';
-                    editBtn.innerHTML = '<i class="fas fa-edit"></i>';
-                    editBtn.addEventListener('click', () => {
-                        materialsManager?.editMaterial(material);
-                    });
-
-                    actions.appendChild(applyBtn);
-                    actions.appendChild(editBtn);
-                    row.appendChild(preview);
-                    row.appendChild(info);
-                    row.appendChild(actions);
-                    listContainer.appendChild(row);
-                });
-            };
-        }
-
-        searchInput.addEventListener('input', () => {
-            this.assetSearch = searchInput.value;
-            renderList();
-        });
-
-        renderList();
+    resetPanelToDefault() {
+        this.switchRightTab('hierarchy');
     }
 
     setupPanelTabs() {
@@ -1128,26 +750,6 @@ export class UI {
                 this.app.onWindowResize();
             }
         }, 300); // Wait for CSS transition to complete
-    }
-
-    resetPanelToDefault() {
-        // Show scene objects and properties, hide materials and scene export
-        const sceneSection = document.getElementById('scene-section');
-        const materialsSection = document.getElementById('materials-section');
-        const assetsSection = document.getElementById('assets-section');
-        const propsContent = document.getElementById('props-content');
-        const layersList = document.getElementById('layers-list');
-
-        if (sceneSection) sceneSection.style.display = 'none';
-        if (materialsSection) materialsSection.style.display = 'none';
-        if (assetsSection) assetsSection.style.display = 'none';
-        if (propsContent) propsContent.style.display = 'block';
-        if (layersList) layersList.style.display = 'block';
-
-        // Show all panel headers
-        document.querySelectorAll('.panel-header').forEach(header => {
-            header.style.display = 'flex';
-        });
     }
 
     loadSettings() {
@@ -1334,6 +936,8 @@ export class UI {
 
     // --- PROPERTIES PANEL ---
     updateUI(selectedObject) {
+        if (selectedObject) this.switchRightTab('properties');
+
         // Delegate Layer List Rendering to LayerManager
         if (this.app.layerManager) {
             this.app.layerManager.render();
@@ -1395,6 +999,7 @@ export class UI {
             this.togglePropertiesPanel();
         }
 
+        this.switchRightTab('properties');
         this.propsContent.innerHTML = '';
 
         if (!entity) {
@@ -1883,7 +1488,25 @@ export class UI {
                 row.appendChild(label);
 
                 let input;
-                if (param.type === 'image-target') {
+                if (param.type === 'entity') {
+                    input = document.createElement('select');
+                    input.className = 'component-select';
+                    const selfOption = document.createElement('option');
+                    selfOption.value = '';
+                    selfOption.textContent = 'This element';
+                    input.appendChild(selfOption);
+
+                    const entities = this.app.aframeManager?.getAllEntities?.() || [];
+                    entities.forEach(item => {
+                        const element = item.element;
+                        if (!element || !element.id) return;
+                        const option = document.createElement('option');
+                        option.value = '#' + element.id;
+                        option.textContent = `#${element.id} (${element.tagName.toLowerCase()})`;
+                        input.appendChild(option);
+                    });
+                    input.value = param.default || '';
+                } else if (param.type === 'image-target') {
                     input = document.createElement('select');
                     input.className = 'component-select';
                     const selfOption = document.createElement('option');
@@ -2867,38 +2490,6 @@ export class UI {
             notification.style.transform = 'translateY(-20px)';
             setTimeout(() => notification.remove(), 300);
         }, 3000);
-    }
-
-    // --- SCENE PANEL VIEW ---
-    toggleSceneView() {
-        const sceneSection = document.getElementById('scene-section');
-        const materialsSection = document.getElementById('materials-section');
-        const assetsSection = document.getElementById('assets-section');
-        const propsContent = document.getElementById('props-content');
-        const layersList = document.getElementById('layers-list');
-
-        if (sceneSection && materialsSection && propsContent && layersList) {
-            const isSceneVisible = sceneSection.style.display !== 'none';
-
-            if (isSceneVisible) {
-                this.resetPanelToDefault();
-            } else {
-                sceneSection.style.display = 'flex';
-                materialsSection.style.display = 'none';
-                if (assetsSection) assetsSection.style.display = 'none';
-                propsContent.style.display = 'none';
-                layersList.style.display = 'none';
-                document.querySelectorAll('.panel-header').forEach(header => {
-                    header.style.display = 'none';
-                });
-                sceneSection.querySelectorAll('.panel-header').forEach(header => {
-                    header.style.display = 'flex';
-                });
-            }
-
-            // Initialize scene export functionality
-            this.initSceneExport();
-        }
     }
 
     initSceneExport() {
