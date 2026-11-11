@@ -775,12 +775,15 @@ export class UI {
 
         const tabs = [
             { id: 'all', label: 'All', icon: 'fa-layer-group', types: ['image', 'panorama', 'video', 'audio', 'model'] },
+            { id: 'components', label: 'Components', icon: 'fa-puzzle-piece', types: [] },
+            { id: 'materials', label: 'Materials', icon: 'fa-palette', types: [] },
+            { id: 'textures', label: 'Textures', icon: 'fa-th', types: ['image', 'panorama'] },
+            { id: 'colors', label: 'Colors', icon: 'fa-tint', types: [] },
             { id: 'images', label: 'Images', icon: 'fa-image', types: ['image', 'panorama'] },
             { id: 'media', label: 'Media', icon: 'fa-video', types: ['video'] },
             { id: 'audio', label: 'Audio', icon: 'fa-volume-up', types: ['audio'] },
             { id: 'models', label: 'Models', icon: 'fa-cubes', types: ['model'] },
-            { id: 'mixins', label: 'Mixins', icon: 'fa-clone', types: [] },
-            { id: 'materials', label: 'Materials', icon: 'fa-palette', types: [] }
+            { id: 'mixins', label: 'Mixins', icon: 'fa-clone', types: [] }
         ];
 
         const tabBar = document.createElement('div');
@@ -835,7 +838,7 @@ export class UI {
             return button;
         };
 
-        if (this.assetTab !== 'materials' && this.assetTab !== 'mixins') {
+        if (!['materials', 'mixins', 'components', 'colors'].includes(this.assetTab)) {
             const currentTab = tabs.find(tab => tab.id === this.assetTab) || tabs[0];
             const tabLabel = currentTab.id === 'all' ? 'Assets' : currentTab.label;
             const form = document.createElement('div');
@@ -846,8 +849,9 @@ export class UI {
                 : currentTab.id === 'media' ? '<option value="video">Video</option>'
                 : currentTab.id === 'audio' ? '<option value="audio">Audio</option>'
                 : '<option value="model">3D Model (.glb / .gltf)</option>';
+            const addLabel = currentTab.id === 'textures' ? 'Add Texture' : `Add ${tabLabel}`;
             form.innerHTML = `
-                <div class="property-label">Add ${tabLabel}</div>
+                <div class="property-label">${addLabel}</div>
                 <div class="input-group"><span>Name</span><input type="text" class="asset-name" placeholder="My asset"></div>
                 <div class="input-group"><span>Type</span><select class="component-select asset-type">${options}</select></div>
                 <div class="input-group"><span>URL</span><input type="text" class="asset-url" placeholder="https://..."></div>
@@ -857,6 +861,10 @@ export class UI {
             `;
             const fileInput = form.querySelector('.asset-file');
             fileInput.accept = currentTab.id === 'audio' ? 'audio/*' : currentTab.id === 'media' ? 'video/*' : currentTab.id === 'models' ? '.glb,.gltf' : currentTab.id === 'all' ? '' : 'image/*';
+            const optionMarkup = currentTab.id === 'textures'
+                ? '<option value="image">Image Texture</option><option value="panorama">360 Texture</option>'
+                : options;
+            form.querySelector('.asset-type').innerHTML = optionMarkup;
             form.querySelector('.asset-file-btn').addEventListener('click', () => fileInput.click());
             fileInput.addEventListener('change', () => {
                 const file = fileInput.files && fileInput.files[0];
@@ -921,6 +929,98 @@ export class UI {
                                 this.renderAssetsSection();
                             })
                         ]
+                    ));
+                });
+            };
+        } else if (this.assetTab === 'components') {
+            const componentSystem = this.app.componentSystem;
+            container.appendChild(listContainer);
+            renderList = () => {
+                listContainer.innerHTML = '';
+                const query = this.assetSearch.toLowerCase();
+                const components = (componentSystem?.getAvailableComponents?.() || []).filter(component =>
+                    !query || `${component.label} ${component.name} ${component.category}`.toLowerCase().includes(query)
+                );
+                if (!components.length) {
+                    listContainer.innerHTML = '<div class="empty-state">No components found.</div>';
+                    return;
+                }
+                components.forEach(component => {
+                    const preview = document.createElement('div');
+                    preview.className = 'material-preview';
+                    preview.innerHTML = '<i class="fas fa-puzzle-piece" style="display:flex;align-items:center;justify-content:center;height:100%;"></i>';
+                    listContainer.appendChild(makeRow(
+                        preview,
+                        component.label,
+                        `${component.category} · ${component.name}`,
+                        [iconButton('fa-plus', 'Add to selected element', () => {
+                            const selected = this.app.aframeManager?.getSelectedEntity?.();
+                            if (!selected) {
+                                this.showNotification('Select an A-Frame element first.', 'info');
+                                return;
+                            }
+                            componentSystem.addComponent(selected, component.name);
+                            this.renderAFramePropertiesPanel(selected);
+                        })]
+                    ));
+                });
+            };
+        } else if (this.assetTab === 'colors') {
+            const getColorAssets = () => {
+                try { return JSON.parse(localStorage.getItem('pixelAFrame-color-assets') || '[]'); }
+                catch (err) { return []; }
+            };
+            const saveColorAssets = (colors) => localStorage.setItem('pixelAFrame-color-assets', JSON.stringify(colors));
+
+            const form = document.createElement('div');
+            form.className = 'property-group asset-add-form';
+            form.innerHTML = `
+                <div class="property-label">Add Color</div>
+                <div class="input-group"><span>Name</span><input type="text" class="color-name" placeholder="Sky blue"></div>
+                <div class="input-group"><span>Color</span><input type="color" class="color-value" value="#4CC3D9"></div>
+                <button class="btn primary" style="width:100%;margin-top:5px;"><i class="fas fa-plus"></i> Add Color</button>
+            `;
+            form.querySelector('button').addEventListener('click', () => {
+                const colors = getColorAssets();
+                colors.push({
+                    name: form.querySelector('.color-name').value.trim() || 'Color',
+                    color: form.querySelector('.color-value').value
+                });
+                saveColorAssets(colors);
+                this.renderAssetsSection();
+            });
+            container.appendChild(form);
+            container.appendChild(listContainer);
+
+            renderList = () => {
+                listContainer.innerHTML = '';
+                const query = this.assetSearch.toLowerCase();
+                const colors = getColorAssets().filter(color => !query || color.name.toLowerCase().includes(query));
+                if (!colors.length) {
+                    listContainer.innerHTML = '<div class="empty-state"><p>No color assets yet.</p><p>Add a named color above.</p></div>';
+                    return;
+                }
+                colors.forEach((color, index) => {
+                    const preview = document.createElement('div');
+                    preview.className = 'material-preview';
+                    preview.style.backgroundColor = color.color;
+                    listContainer.appendChild(makeRow(
+                        preview,
+                        color.name,
+                        color.color,
+                        [iconButton('fa-check', 'Apply to selected element', () => {
+                            const selected = this.app.aframeManager?.getSelectedEntity?.();
+                            if (!selected) {
+                                this.showNotification('Select an A-Frame element first.', 'info');
+                                return;
+                            }
+                            selected.setAttribute('material', 'color', color.color);
+                        }), iconButton('fa-trash', 'Delete color', () => {
+                            const colors = getColorAssets();
+                            colors.splice(index, 1);
+                            saveColorAssets(colors);
+                            this.renderAssetsSection();
+                        })]
                     ));
                 });
             };
