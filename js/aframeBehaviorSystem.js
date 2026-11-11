@@ -279,6 +279,75 @@ export const BEHAVIOR_LIBRARY = {
             return { actions: true };
         }
     },
+    'swap-image': {
+        label: 'Swap Image',
+        icon: 'fa-images',
+        category: 'Visual State',
+        description: 'Change a chosen image to another image. Optionally restore the original when the pointer leaves.',
+        params: {
+            target: { type: 'image-target', default: '', label: 'Image to swap' },
+            replacementAsset: { type: 'image-asset', default: '', label: 'Swap with asset' },
+            replacementUrl: { type: 'text', default: '', label: 'or image URL' },
+            trigger: { type: 'select', options: ['click', 'mouseenter'], default: 'click', label: 'When' },
+            preload: { type: 'boolean', default: true, label: 'Preload image' },
+            restoreOnMouseOut: { type: 'boolean', default: false, label: 'Restore on hover out' }
+        },
+        apply(entity, params, id, app) {
+            let replacement = (params.replacementUrl || params.replacementAsset || '').trim();
+            if (!replacement) return { actions: false };
+
+            // Preload remote replacement images as reusable assets so the swap
+            // does not flicker while the browser downloads the new image.
+            if (params.preload && !replacement.startsWith('#') && app?.assetSystem) {
+                let asset = app.assetSystem.getAssets().find(item => item.src === replacement);
+                if (!asset) {
+                    asset = app.assetSystem.addAsset({ name: 'Swap image', type: 'image', src: replacement });
+                }
+                if (asset) replacement = '#' + asset.id;
+            }
+
+            const target = params.target || '';
+            addAction(entity, id, {
+                trigger: params.trigger || 'click',
+                type: 'swap-image',
+                target,
+                value: replacement
+            });
+
+            if (params.restoreOnMouseOut) {
+                const targetElement = target ? document.querySelector(target) : entity;
+                const original = targetElement ? targetElement.getAttribute('src') : '';
+                if (original) {
+                    addAction(entity, id, {
+                        trigger: 'mouseleave',
+                        type: 'swap-image',
+                        target,
+                        value: original
+                    });
+                }
+            }
+
+            return { actions: true };
+        }
+    },
+    'call-javascript': {
+        label: 'Call JavaScript',
+        icon: 'fa-code',
+        category: 'Logic',
+        description: 'Run a small JavaScript snippet when the object is clicked. Useful for custom classroom logic.',
+        params: {
+            trigger: { type: 'select', options: ['click', 'mouseenter', 'mouseleave'], default: 'click', label: 'When' },
+            code: { type: 'textarea', default: 'console.log(\'Hello from A-Frame!\');', label: 'JavaScript' }
+        },
+        apply(entity, params, id) {
+            addAction(entity, id, {
+                trigger: params.trigger || 'click',
+                type: 'run-code',
+                value: params.code || ''
+            });
+            return { actions: true };
+        }
+    },
     'show-if-correct': {
         label: 'Show If Correct',
         icon: 'fa-check-circle',
@@ -382,7 +451,7 @@ export class AFrameBehaviorSystem {
         if (!entity || !definition) return null;
 
         const id = `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-        const result = definition.apply(entity, params, id) || {};
+        const result = definition.apply(entity, params, id, this.app) || {};
         const record = {
             id,
             type,

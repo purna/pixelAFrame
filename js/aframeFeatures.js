@@ -88,14 +88,14 @@ export const AFrameFeatureScript = `
             actions.forEach(function (action) {
                 if ((action.trigger || 'click') !== eventName) return;
                 try {
-                    self.runAction(action);
+                    self.runAction(action, evt);
                 } catch (err) {
                     console.error('Behaviour error:', action, err);
                 }
             });
         },
 
-        runAction: function (action) {
+        runAction: function (action, evt) {
             var el = this.el;
             var target = resolveTarget(el, action.target || '');
             var value = action.value || '';
@@ -140,7 +140,10 @@ export const AFrameFeatureScript = `
                     if (target) target.setAttribute('visible', false);
                     break;
                 case 'swap-image':
-                    if (target && value) target.setAttribute('material', 'src', value);
+                    if (target && value) {
+                        target.setAttribute('src', value);
+                        target.setAttribute('material', 'src', value);
+                    }
                     break;
                 case 'set-color':
                     if (target && value) target.setAttribute('material', 'color', value);
@@ -157,6 +160,13 @@ export const AFrameFeatureScript = `
                     }
                     break;
                 }
+                case 'run-code':
+                    try {
+                        new Function('el', 'event', value).call(el, el, evt);
+                    } catch (err) {
+                        console.error('Custom JavaScript behaviour error:', err);
+                    }
+                    break;
                 case 'vibrate': {
                     var duration = Number(action.duration || 120);
                     var intensity = Number(action.intensity ?? 0.6);

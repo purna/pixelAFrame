@@ -49,9 +49,12 @@ export class FileManager {
             });
         }
 
-        // Include reusable A-Frame assets.
+        // Include reusable A-Frame assets and mixins.
         this.app.assetSystem?.getAssets().forEach(asset => {
             data.push({ type: 'aframe-asset', asset });
+        });
+        this.app.mixinSystem?.getMixins().forEach(mixin => {
+            data.push({ type: 'aframe-mixin', mixin });
         });
 
         const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
@@ -108,6 +111,9 @@ export class FileManager {
 
         this.app.assetSystem?.getAssets().forEach(asset => {
             data.push({ type: 'aframe-asset', asset });
+        });
+        this.app.mixinSystem?.getMixins().forEach(mixin => {
+            data.push({ type: 'aframe-mixin', mixin });
         });
 
         // Save to localStorage
@@ -212,13 +218,24 @@ export class FileManager {
     loadData(data) {
         this.app.clearScene();
         
-        // Separate Three.js objects, A-Frame elements and reusable assets.
+        // Separate Three.js objects, A-Frame elements, assets and mixins.
         const assetData = data.filter(item => item.type === 'aframe-asset');
-        const threeJSData = data.filter(item => item.type !== 'aframe-element' && item.type !== 'aframe-asset');
+        const mixinData = data.filter(item => item.type === 'aframe-mixin');
+        const threeJSData = data.filter(item =>
+            !['aframe-element', 'aframe-asset', 'aframe-mixin'].includes(item.type)
+        );
         const aframeData = data.filter(item => item.type === 'aframe-element');
 
         assetData.forEach(item => {
             if (item.asset) this.app.assetSystem?.addAsset(item.asset);
+        });
+
+        // Load mixins before entities so entity mixin references resolve.
+        mixinData.forEach(item => {
+            if (!item.mixin) return;
+            const existing = this.app.mixinSystem?.getMixin(item.mixin.id);
+            if (existing) this.app.mixinSystem.updateMixin(item.mixin.id, item.mixin);
+            else this.app.mixinSystem?.createMixin(item.mixin);
         });
         
         let loadedCount = 0;
@@ -464,6 +481,8 @@ body {
         <a-assets>
             <!-- Student assets -->
 ${this.app.assetSystem?.getExportHTML() || ''}
+            <!-- Reusable mixins -->
+${this.app.mixinSystem?.getExportHTML() || ''}
             <!-- Preload assets -->
             <a-asset-item id="xbot-model" src="assets/Xbot.glb"></a-asset-item>
             <a-asset-item id="ybot-model" src="assets/Ybot.glb"></a-asset-item>

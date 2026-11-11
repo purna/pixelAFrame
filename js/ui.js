@@ -629,16 +629,18 @@ export class UI {
             return;
         }
 
-        this.assetTab = this.assetTab || 'images';
+        this.assetTab = this.assetTab || 'all';
         this.assetSearch = this.assetSearch || '';
 
         container.innerHTML = '';
 
         const tabs = [
+            { id: 'all', label: 'All', icon: 'fa-layer-group', types: ['image', 'panorama', 'video', 'audio', 'model'] },
             { id: 'images', label: 'Images', icon: 'fa-image', types: ['image', 'panorama'] },
             { id: 'media', label: 'Media', icon: 'fa-video', types: ['video'] },
             { id: 'audio', label: 'Audio', icon: 'fa-volume-up', types: ['audio'] },
             { id: 'models', label: 'Models', icon: 'fa-cubes', types: ['model'] },
+            { id: 'mixins', label: 'Mixins', icon: 'fa-clone', types: [] },
             { id: 'materials', label: 'Materials', icon: 'fa-palette', types: [] }
         ];
 
@@ -668,22 +670,25 @@ export class UI {
 
         let renderList = () => {};
 
-        if (this.assetTab !== 'materials') {
+        if (!['materials', 'mixins'].includes(this.assetTab)) {
             const currentTab = tabs.find(tab => tab.id === this.assetTab) || tabs[0];
+            const tabLabel = currentTab.id === 'all' ? 'Assets' : currentTab.label;
 
             // Add asset form
             const form = document.createElement('div');
             form.className = 'property-group asset-add-form';
-            const typeOptions = this.assetTab === 'images'
-                ? '<option value="image">Image</option><option value="panorama">360 Panorama</option>'
-                : this.assetTab === 'media'
-                    ? '<option value="video">Video</option>'
-                    : this.assetTab === 'audio'
-                        ? '<option value="audio">Audio</option>'
-                        : '<option value="model">3D Model (.glb / .gltf)</option>';
+            const typeOptions = this.assetTab === 'all'
+                ? '<option value="image">Image</option><option value="panorama">360 Panorama</option><option value="video">Video</option><option value="audio">Audio</option><option value="model">3D Model (.glb / .gltf)</option>'
+                : this.assetTab === 'images'
+                    ? '<option value="image">Image</option><option value="panorama">360 Panorama</option>'
+                    : this.assetTab === 'media'
+                        ? '<option value="video">Video</option>'
+                        : this.assetTab === 'audio'
+                            ? '<option value="audio">Audio</option>'
+                            : '<option value="model">3D Model (.glb / .gltf)</option>';
 
             form.innerHTML = `
-                <div class="property-label">Add ${currentTab.label}</div>
+                <div class="property-label">Add ${tabLabel}</div>
                 <div class="input-group"><span>Name</span><input type="text" class="asset-name" placeholder="My asset"></div>
                 <div class="input-group"><span>Type</span><select class="component-select asset-type">${typeOptions}</select></div>
                 <div class="input-group"><span>URL</span><input type="text" class="asset-url" placeholder="https://..."></div>
@@ -693,7 +698,8 @@ export class UI {
             `;
 
             const fileInput = form.querySelector('.asset-file');
-            fileInput.accept = this.assetTab === 'audio' ? 'audio/*'
+            fileInput.accept = this.assetTab === 'all' ? ''
+                : this.assetTab === 'audio' ? 'audio/*'
                 : this.assetTab === 'media' ? 'video/*'
                 : this.assetTab === 'models' ? '.glb,.gltf'
                 : 'image/*';
@@ -742,7 +748,7 @@ export class UI {
                 if (assets.length === 0) {
                     const empty = document.createElement('div');
                     empty.className = 'empty-state';
-                    empty.innerHTML = `<p>No ${currentTab.label.toLowerCase()} assets yet.</p><p>Add a URL or choose a file above.</p>`;
+                    empty.innerHTML = `<p>No ${tabLabel.toLowerCase()} yet.</p><p>Add a URL or choose a file above.</p>`;
                     listContainer.appendChild(empty);
                     return;
                 }
@@ -801,6 +807,97 @@ export class UI {
                     actions.appendChild(applyBtn);
                     actions.appendChild(deleteBtn);
 
+                    row.appendChild(preview);
+                    row.appendChild(info);
+                    row.appendChild(actions);
+                    listContainer.appendChild(row);
+                });
+            };
+        } else if (this.assetTab === 'mixins') {
+            const mixinSystem = this.app.mixinSystem;
+            const form = document.createElement('div');
+            form.className = 'property-group asset-add-form';
+            form.innerHTML = `
+                <div class="property-label">Mixins</div>
+                <button class="btn primary" style="width:100%;"><i class="fas fa-clone"></i> Create Mixin from Selected Element</button>
+            `;
+            form.querySelector('button').addEventListener('click', () => {
+                const selected = this.app.aframeManager?.getSelectedEntity?.();
+                if (!selected) {
+                    this.showNotification('Select an A-Frame element first.', 'info');
+                    return;
+                }
+                const name = window.prompt('Mixin name:', selected.id ? selected.id + ' Mixin' : 'New Mixin');
+                if (!name) return;
+                mixinSystem?.createFromElement(selected, name);
+                this.renderAssetsSection();
+                this.showNotification(`Mixin "${name}" saved as an asset`, 'success');
+            });
+            container.appendChild(form);
+
+            const listContainer = document.createElement('div');
+            listContainer.className = 'assets-list';
+            container.appendChild(listContainer);
+
+            renderList = () => {
+                listContainer.innerHTML = '';
+                const query = this.assetSearch.toLowerCase();
+                const mixins = (mixinSystem?.getMixins() || []).filter(mixin => {
+                    if (!query) return true;
+                    return `${mixin.name} ${mixin.id}`.toLowerCase().includes(query);
+                });
+
+                if (mixins.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'empty-state';
+                    empty.innerHTML = '<p>No mixins yet.</p><p>Select an element and save its components as a reusable mixin.</p>';
+                    listContainer.appendChild(empty);
+                    return;
+                }
+
+                mixins.forEach(mixin => {
+                    const row = document.createElement('div');
+                    row.className = 'material-item';
+                    row.style.alignItems = 'center';
+
+                    const preview = document.createElement('div');
+                    preview.className = 'material-preview';
+                    preview.innerHTML = '<i class="fas fa-clone" style="display:flex;align-items:center;justify-content:center;height:100%;"></i>';
+
+                    const componentNames = Object.keys(mixin.components || {});
+                    const info = document.createElement('div');
+                    info.className = 'material-info';
+                    info.innerHTML = `<div style="font-size:0.75rem; color:var(--text-primary); font-weight:bold;">${mixin.name}</div><div style="font-size:0.65rem; color:var(--text-secondary);">${componentNames.length ? componentNames.join(', ') : 'No components'} · #${mixin.id}</div>`;
+
+                    const actions = document.createElement('div');
+                    actions.className = 'material-actions';
+
+                    const applyBtn = document.createElement('button');
+                    applyBtn.className = 'btn icon-only';
+                    applyBtn.title = 'Apply mixin to selected element';
+                    applyBtn.innerHTML = '<i class="fas fa-check"></i>';
+                    applyBtn.addEventListener('click', () => {
+                        const selected = this.app.aframeManager?.getSelectedEntity?.();
+                        if (!selected) {
+                            this.showNotification('Select an A-Frame element first.', 'info');
+                            return;
+                        }
+                        mixinSystem.applyToElement(selected, mixin.id);
+                        this.renderAFramePropertiesPanel(selected);
+                    });
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btn icon-only';
+                    deleteBtn.title = 'Delete mixin';
+                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                    deleteBtn.addEventListener('click', () => {
+                        if (!window.confirm(`Delete mixin "${mixin.name}"?`)) return;
+                        mixinSystem.deleteMixin(mixin.id);
+                        this.renderAssetsSection();
+                    });
+
+                    actions.appendChild(applyBtn);
+                    actions.appendChild(deleteBtn);
                     row.appendChild(preview);
                     row.appendChild(info);
                     row.appendChild(actions);
@@ -1786,7 +1883,50 @@ export class UI {
                 row.appendChild(label);
 
                 let input;
-                if (param.type === 'boolean') {
+                if (param.type === 'image-target') {
+                    input = document.createElement('select');
+                    input.className = 'component-select';
+                    const selfOption = document.createElement('option');
+                    selfOption.value = '';
+                    selfOption.textContent = 'This element';
+                    input.appendChild(selfOption);
+
+                    const entities = this.app.aframeManager?.getAllEntities?.() || [];
+                    entities
+                        .filter(item => ['a-image', 'a-sky', 'a-video', 'a-videosphere'].includes(item.element?.tagName?.toLowerCase()))
+                        .forEach(item => {
+                            const element = item.element;
+                            if (!element.id) return;
+                            const option = document.createElement('option');
+                            option.value = '#' + element.id;
+                            option.textContent = `#${element.id} (${element.tagName.toLowerCase()})`;
+                            input.appendChild(option);
+                        });
+                    input.value = param.default || '';
+                } else if (param.type === 'image-asset') {
+                    input = document.createElement('select');
+                    input.className = 'component-select';
+                    const emptyOption = document.createElement('option');
+                    emptyOption.value = '';
+                    emptyOption.textContent = 'Choose image asset...';
+                    input.appendChild(emptyOption);
+
+                    const assets = this.app.assetSystem?.getAssets?.() || [];
+                    assets
+                        .filter(asset => asset.type === 'image' || asset.type === 'panorama')
+                        .forEach(asset => {
+                            const option = document.createElement('option');
+                            option.value = '#' + asset.id;
+                            option.textContent = `${asset.name} (#${asset.id})`;
+                            input.appendChild(option);
+                        });
+                    input.value = param.default || '';
+                } else if (param.type === 'textarea') {
+                    input = document.createElement('textarea');
+                    input.className = 'component-select';
+                    input.rows = 3;
+                    input.value = param.default !== undefined ? param.default : '';
+                } else if (param.type === 'boolean') {
                     input = document.createElement('input');
                     input.type = 'checkbox';
                     input.checked = param.default === true;
