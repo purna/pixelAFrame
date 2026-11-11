@@ -75,7 +75,7 @@ export class AFrameAssetSystem {
 
     seedExampleAssets() {
         const seedKey = 'pixelAFrame-example-assets-seeded';
-        const seedVersion = '1';
+        const seedVersion = '2';
         if (localStorage.getItem(seedKey) === seedVersion) return;
 
         const examples = [

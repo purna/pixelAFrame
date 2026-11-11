@@ -1800,15 +1800,22 @@ export class UI {
             const assetSelect = document.createElement('select');
             assetSelect.className = 'component-select';
             assetSelect.innerHTML = '<option value="">Choose from Asset Library...</option>';
-            (this.app.assetSystem?.getAssets?.() || [])
-                .filter(asset => assetTypes.includes(asset.type))
-                .forEach(asset => {
-                    const option = document.createElement('option');
-                    option.value = asset.id;
-                    option.textContent = `${asset.name} (#${asset.id})`;
-                    option.dataset.src = '#' + asset.id;
-                    assetSelect.appendChild(option);
-                });
+            const matchingAssets = (this.app.assetSystem?.getAssets?.() || [])
+                .filter(asset => assetTypes.includes(asset.type));
+            matchingAssets.forEach(asset => {
+                const option = document.createElement('option');
+                option.value = asset.id;
+                option.textContent = `${asset.name} (#${asset.id})`;
+                option.dataset.src = '#' + asset.id;
+                assetSelect.appendChild(option);
+            });
+            if (matchingAssets.length === 0) {
+                const emptyOption = document.createElement('option');
+                emptyOption.value = '';
+                emptyOption.textContent = 'No matching assets - add one in the Assets tab';
+                emptyOption.disabled = true;
+                assetSelect.appendChild(emptyOption);
+            }
             const currentSrc = entity.getAttribute('src') || '';
             if (currentSrc.startsWith('#')) assetSelect.value = currentSrc.slice(1);
             assetSelect.addEventListener('change', () => {
