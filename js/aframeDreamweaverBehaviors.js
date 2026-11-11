@@ -316,4 +316,73 @@ export const DREAMWEAVER_BEHAVIORS = {
             return { actions: true };
         }
     }
+    ,
+    'set-collider-trigger': {
+        label: 'Set Collider / Trigger', icon: 'fa-cube', category: 'XR Physics',
+        description: 'Turn an entity into a trigger zone or collision body for XR interactions.',
+        params: {
+            target: { type: 'entity', default: '', label: 'Entity' },
+            mode: { type: 'select', options: ['trigger', 'collider', 'off'], default: 'trigger', label: 'Mode' },
+            role: { type: 'select', options: ['object', 'player'], default: 'object', label: 'This entity is a' },
+            filter: { type: 'select', options: ['any', 'player', 'object'], default: 'any', label: 'Reacts to' },
+            size: { type: 'text', default: '', label: 'Fixed size, e.g. 0.3 0.3 0.3' }
+        },
+        apply(entity, params) {
+            const targetSelector = params.target || '';
+            const target = targetSelector ? document.querySelector(targetSelector) : entity;
+            if (!target) return { actions: false };
+            if (params.mode === 'off') target.removeAttribute('xr-body');
+            else target.setAttribute('xr-body', `mode: ${params.mode || 'trigger'}; role: ${params.role || 'object'}; filter: ${params.filter || 'any'}; size: ${params.size || '0 0 0'}`);
+            return { external: [{ selector: targetSelector, attr: 'xr-body' }] };
+        }
+    },
+    'make-grabbable': {
+        label: 'Make Grabbable', icon: 'fa-hand-rock', category: 'XR Physics',
+        description: 'Let controllers pick up and drop the object.',
+        params: {
+            target: { type: 'entity', default: '', label: 'Entity' },
+            button: { type: 'select', options: ['grip', 'trigger', 'either'], default: 'grip', label: 'Controller button' },
+            reach: { type: 'number', default: 0.25, label: 'Reach (m)', min: 0.05, max: 3, step: 0.05 },
+            drop: { type: 'select', options: ['stay', 'floor'], default: 'stay', label: 'On release' }
+        },
+        apply(entity, params) {
+            const targetSelector = params.target || '';
+            const target = targetSelector ? document.querySelector(targetSelector) : entity;
+            if (!target) return { actions: false };
+            target.setAttribute('xr-grab', `button: ${params.button || 'grip'}; reach: ${params.reach ?? 0.25}; drop: ${params.drop || 'stay'}`);
+            return { external: [{ selector: targetSelector, attr: 'xr-grab' }, { selector: targetSelector, attr: 'xr-body' }] };
+        }
+    },
+    'snap-dropped-entity': {
+        label: 'Snap Dropped Entity', icon: 'fa-magnet', category: 'XR Physics',
+        description: 'When used with a trigger zone, snap a dropped object to this zone.',
+        params: {
+            axis: { type: 'select', options: ['X Z (keep height)', 'X Y Z'], default: 'X Z (keep height)', label: 'Snap' }
+        },
+        apply(entity, params, id) {
+            addAction(entity, id, { trigger: 'xr-drop-in', type: 'snap-dropped-entity', axis: params.axis || 'X Z (keep height)' });
+            return { actions: true };
+        }
+    },
+    'set-gaze-dwell': {
+        label: 'Set Gaze Dwell', icon: 'fa-eye', category: 'Gaze / Hands',
+        description: 'Select objects by looking at them for a set time or by clicking.',
+        params: {
+            fuse: { type: 'boolean', default: true, label: 'Click by looking (fuse)' },
+            duration: { type: 'number', default: 1200, label: 'Dwell time (ms)', min: 100, max: 10000, step: 100 }
+        },
+        apply(entity, params) {
+            const scene = entity.sceneEl || document.getElementById('aframe-scene');
+            let cursor = scene?.querySelector('a-cursor');
+            if (!cursor) {
+                const camera = scene?.querySelector('a-camera');
+                if (camera) {
+                    cursor = document.createElement('a-cursor');
+                    camera.appendChild(cursor);
+                }
+            }
+            if (cursor) cursor.setAttribute('cursor', { fuse: params.fuse !== false, fuseTimeout: Number(params.duration) || 1200 });
+            return { actions: false };
+        }
+    }
 };

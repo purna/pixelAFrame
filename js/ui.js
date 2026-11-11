@@ -1,3 +1,4 @@
+import { getEntitySchema } from './entitySchemas.js';
 import { getEntityDoc, getComponentDoc, formatExampleHTML } from './aframeDocs.js';
 
 export class UI {
@@ -1126,7 +1127,7 @@ export class UI {
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay open';
         overlay.innerHTML = `
-            <div class="modal">
+            <div class="modal editor-modal">
                 <div class="modal-title">${title}</div>
                 <div class="modal-body">${bodyHtml}</div>
                 <div class="modal-actions">
@@ -1151,7 +1152,7 @@ export class UI {
                     ${['image', 'panorama', 'video', 'audio', 'model'].map(type => `<option value="${type}" ${asset.type === type ? 'selected' : ''}>${type}</option>`).join('')}
                 </select>
             </div>
-            <div class="property-group"><label class="property-label">Source URL</label><input type="text" data-field="src" value="${asset.src || ''}"></div>
+            <div class="property-group"><label class="property-label">Source URL</label><textarea rows="3" data-field="src">${asset.src || ''}</textarea></div>
             <input type="file" data-file style="display:none">
             <button class="btn" data-choose style="width:100%;"><i class="fas fa-folder-open"></i> Replace File</button>
         `);
@@ -1749,6 +1750,9 @@ export class UI {
         });
         this.propsContent.appendChild(visibleGroup);
 
+        // Entity-specific editable attributes (text value, light settings, geometry values, etc.)
+        this.renderEntitySchemaFields(entity, entity.tagName.toLowerCase());
+
         // Material controls
         const materialAttr = entity.getAttribute('material') || {};
         const materialGroup = document.createElement('div');
@@ -1774,17 +1778,6 @@ export class UI {
         });
 
         this.propsContent.appendChild(materialGroup);
-
-        // Text value (a-text)
-        if (entity.tagName.toLowerCase() === 'a-text') {
-            const textGroup = document.createElement('div');
-            textGroup.className = 'property-group';
-            textGroup.innerHTML = `<div class="property-label">Text</div><input type="text" style="width:100%;" value="${entity.getAttribute('value') || ''}">`;
-            textGroup.querySelector('input').addEventListener('change', (e) => {
-                entity.setAttribute('value', e.target.value);
-            });
-            this.propsContent.appendChild(textGroup);
-        }
 
         const tag = entity.tagName.toLowerCase();
         const mediaTags = ['a-image', 'a-video', 'a-sky', 'a-videosphere', 'a-sound', 'a-gltf-model'];
@@ -1875,20 +1868,6 @@ export class UI {
 
             this.propsContent.appendChild(mediaGroup);
 
-            if (tag === 'a-sound') {
-                const soundGroup = document.createElement('div');
-                soundGroup.className = 'property-group';
-                soundGroup.innerHTML = `
-                    <div class="property-label">Audio</div>
-                    <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem;"><input type="checkbox" class="sound-autoplay" ${entity.getAttribute('autoplay') === true ? 'checked' : ''}> Autoplay</label>
-                    <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem;"><input type="checkbox" class="sound-loop" ${entity.getAttribute('loop') === true ? 'checked' : ''}> Loop</label>
-                    <div class="input-group"><span>Volume</span><input type="number" class="sound-volume" min="0" max="1" step="0.05" value="${Number(entity.getAttribute('volume') ?? 1)}"></div>
-                `;
-                soundGroup.querySelector('.sound-autoplay').addEventListener('change', (e) => entity.setAttribute('autoplay', e.target.checked));
-                soundGroup.querySelector('.sound-loop').addEventListener('change', (e) => entity.setAttribute('loop', e.target.checked));
-                soundGroup.querySelector('.sound-volume').addEventListener('change', (e) => entity.setAttribute('volume', Number(e.target.value)));
-                this.propsContent.appendChild(soundGroup);
-            }
         }
 
         // Particle effect controls
@@ -2247,6 +2226,24 @@ export class UI {
                         option.textContent = optionValue;
                         input.appendChild(option);
                     });
+                    if (name === 'trigger') {
+                        [
+                            ['xr-trigger-enter', 'On trigger enter'],
+                            ['xr-trigger-exit', 'On trigger exit'],
+                            ['xr-collision-enter', 'On collision enter'],
+                            ['xr-collision-exit', 'On collision exit'],
+                            ['grabbed', 'On grabbed'],
+                            ['dropped', 'On dropped'],
+                            ['xr-drop-in', 'On dropped in trigger'],
+                            ['triggerdown', 'On controller trigger'],
+                            ['fusing', 'On gaze dwell']
+                        ].forEach(([value, label]) => {
+                            const option = document.createElement('option');
+                            option.value = value;
+                            option.textContent = label;
+                            input.appendChild(option);
+                        });
+                    }
                     input.value = param.default;
                 } else {
                     input = document.createElement('input');
@@ -2540,6 +2537,90 @@ export class UI {
             row.appendChild(name);
             row.appendChild(applyBtn);
             row.appendChild(deleteBtn);
+            group.appendChild(row);
+        });
+
+        this.propsContent.appendChild(group);
+    }
+
+    renderEntitySchemaFields(entity, tagName) {
+        let fields = getEntitySchema(tagName);
+
+        // Fallback for any future/custom entity type: expose its attributes
+        // directly. Generic a-entity components are handled in Components.
+        if (!fields.length && tagName !== 'a-entity') {
+            const ignored = new Set(['id', 'class', 'mixin', 'position', 'rotation', 'scale', 'visible', 'data-studio-behaviors']);
+            fields = Array.from(entity.attributes || [])
+                .filter(attribute => !ignored.has(attribute.name))
+                .map(attribute => ({
+                    attribute: attribute.name,
+                    label: attribute.name,
+                    type: attribute.name.includes('color') ? 'color' : 'text'
+                }));
+        }
+        if (!fields.length) return;
+
+        const group = document.createElement('div');
+        group.className = 'property-group entity-schema-fields';
+        const heading = document.createElement('div');
+        heading.className = 'property-label';
+        heading.textContent = 'Entity Properties';
+        group.appendChild(heading);
+
+        fields.forEach(field => {
+            const row = document.createElement('div');
+            row.className = 'input-group entity-schema-row';
+            const label = document.createElement('span');
+            label.textContent = field.label || field.attribute;
+            row.appendChild(label);
+
+            const rawAttribute = entity.getAttribute(field.attribute);
+            const current = field.property
+                ? (rawAttribute && typeof rawAttribute === 'object' ? rawAttribute[field.property] : undefined)
+                : rawAttribute;
+
+            let input;
+            if (field.type === 'boolean') {
+                input = document.createElement('input');
+                input.type = 'checkbox';
+                input.checked = current === true || current === 'true';
+            } else if (field.type === 'select') {
+                input = document.createElement('select');
+                input.className = 'component-select';
+                (field.options || []).forEach(optionValue => {
+                    const option = document.createElement('option');
+                    option.value = optionValue;
+                    option.textContent = optionValue;
+                    input.appendChild(option);
+                });
+                input.value = current ?? field.options?.[0] ?? '';
+            } else if (field.type === 'textarea') {
+                input = document.createElement('textarea');
+                input.className = 'component-select';
+                input.rows = 4;
+                input.value = current ?? '';
+            } else {
+                input = document.createElement('input');
+                input.type = field.type === 'number' ? 'number' : field.type === 'color' ? 'color' : 'text';
+                if (field.type === 'number') {
+                    if (field.min !== undefined) input.min = field.min;
+                    if (field.max !== undefined) input.max = field.max;
+                    input.step = field.step || 0.1;
+                }
+                input.value = current !== undefined && current !== null ? current : '';
+            }
+
+            input.addEventListener('change', () => {
+                let value;
+                if (field.type === 'boolean') value = input.checked;
+                else if (field.type === 'number') value = Number(input.value);
+                else value = input.value;
+
+                if (field.property) entity.setAttribute(field.attribute, field.property, value);
+                else entity.setAttribute(field.attribute, value);
+            });
+
+            row.appendChild(input);
             group.appendChild(row);
         });
 

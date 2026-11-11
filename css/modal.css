@@ -193,3 +193,82 @@
     font: inherit;
     font-size: 0.8rem;
 }
+
+/* =============================================
+   ASSET / PROPERTY EDITOR MODAL
+   ============================================= */
+.editor-modal {
+    width: 600px;
+    max-width: calc(100% - 40px);
+    padding: 0;
+}
+
+.editor-modal .modal-title {
+    margin: 0;
+    padding: 20px 24px 14px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 1.05rem;
+    color: var(--accent-primary);
+}
+
+.editor-modal .modal-body {
+    padding: 18px 24px;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.editor-modal .modal-actions {
+    margin: 0;
+    padding: 14px 24px 20px;
+    border-top: 1px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.12);
+}
+
+.editor-modal .property-group {
+    margin-bottom: 14px;
+}
+
+.editor-modal .property-label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-bottom: 6px;
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 0.76rem;
+    color: var(--text-primary);
+}
+
+.editor-modal input,
+.editor-modal select,
+.editor-modal textarea {
+    width: 100%;
+    min-height: 38px;
+    padding: 9px 11px;
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-light);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 0.82rem;
+    box-sizing: border-box;
+}
+
+.editor-modal textarea {
+    resize: vertical;
+    min-height: 76px;
+    line-height: 1.45;
+    word-break: break-all;
+}
+
+.editor-modal input:focus,
+.editor-modal select:focus,
+.editor-modal textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px rgba(0, 255, 65, 0.12);
+}
+
+.editor-modal [data-choose] {
+    margin-top: 8px;
+}

@@ -194,6 +194,17 @@ export const AFrameFeatureScript = `
                         target.emit(action.eventName, detail);
                     }
                     break;
+                case 'snap-dropped-entity': {
+                    var dropped = evt && evt.detail && evt.detail.other;
+                    if (!dropped || !dropped.object3D) break;
+                    var snapTarget = target || el;
+                    var a = snapTarget.object3D.position;
+                    var b = dropped.object3D.position;
+                    b.x = a.x;
+                    b.z = a.z;
+                    if (action.axis === 'X Y Z') b.y = a.y;
+                    break;
+                }
                 case 'teleport-camera': {
                     var cameraRig = el.sceneEl && (el.sceneEl.querySelector('#camera-rig') || el.sceneEl.querySelector('a-camera'));
                     if (cameraRig) {
@@ -566,6 +577,121 @@ export const AFrameFeatureScript = `
             if (!target) return;
             if (this.data.action === 'hide') target.setAttribute('visible', false);
             else target.setAttribute('visible', true);
+        }
+    });
+
+    // XR body triggers/colliders and grabbing, adapted from the XR kit.
+    var XR_BODIES = new Set();
+    AFRAME.registerComponent('xr-body', {
+        schema: {
+            mode: { default: 'trigger', oneOf: ['trigger', 'collider'] },
+            role: { default: 'object', oneOf: ['object', 'player'] },
+            filter: { default: 'any', oneOf: ['any', 'player', 'object'] },
+            size: { type: 'vec3' }
+        },
+        init: function () {
+            this.box = new THREE.Box3();
+            this.center = new THREE.Vector3();
+            this.sizeVec = new THREE.Vector3();
+            this.inside = new Set();
+            XR_BODIES.add(this);
+            if (this.el.hasAttribute('hand-tracking-controls')) {
+                this.el.addEventListener('pinchstarted', (e) => { this.el._xrPinchPoint = e.detail.position.clone(); });
+                this.el.addEventListener('pinchmoved', (e) => { this.el._xrPinchPoint = e.detail.position.clone(); });
+                this.el.addEventListener('pinchended', () => { delete this.el._xrPinchPoint; });
+            }
+        },
+        remove: function () { XR_BODIES.delete(this); },
+        tick: function () {
+            var el = this.el, d = this.data, z = d.size;
+            var hand = el.hasAttribute('hand-tracking-controls');
+            el.object3D.updateMatrixWorld(true);
+            if (hand && !el._xrPinchPoint) this.box.makeEmpty();
+            else if ((z && (z.x > 0 || z.y > 0 || z.z > 0)) || hand) {
+                this.box.setFromCenterAndSize(el._xrPinchPoint || el.object3D.getWorldPosition(this.center), this.sizeVec.set(z.x || 0.12, z.y || 0.12, z.z || 0.12));
+            } else {
+                this.box.setFromObject(el.object3D);
+            }
+            var now = new Set();
+            XR_BODIES.forEach((other) => {
+                if (other === this || (d.filter !== 'any' && other.data.role !== d.filter) || el.contains(other.el) || other.el.contains(el)) return;
+                if (this.box.intersectsBox(other.box)) now.add(other.el);
+            });
+            now.forEach((other) => { if (!this.inside.has(other)) this.ping('enter', other); });
+            this.inside.forEach((other) => { if (!now.has(other)) this.ping('exit', other); });
+            this.inside = now;
+        },
+        ping: function (kind, other) {
+            var ob = other.components && other.components['xr-body'];
+            var trigger = this.data.mode === 'trigger' || (ob && ob.data.mode === 'trigger');
+            this.el.emit('xr-' + (trigger ? 'trigger' : 'collision') + '-' + kind, { other: other }, false);
+        }
+    });
+
+    AFRAME.xrDrop = function (el) {
+        var grab = el.components['xr-grab'];
+        var box = new THREE.Box3().setFromObject(el.object3D);
+        if (grab && grab.data.drop === 'floor' && !box.isEmpty()) el.object3D.position.y -= box.min.y;
+        el.emit('dropped', {}, false);
+        XR_BODIES.forEach((zone) => {
+            if (zone.data.mode === 'trigger' && zone.inside.has(el)) zone.el.emit('xr-drop-in', { other: el }, false);
+        });
+    };
+
+    AFRAME.registerComponent('xr-grab', {
+        schema: {
+            button: { default: 'grip', oneOf: ['grip', 'trigger', 'either'] },
+            reach: { default: 0.25 },
+            drop: { default: 'stay', oneOf: ['stay', 'floor'] }
+        },
+        init: function () {
+            this.by = null;
+            this.offset = new THREE.Vector3();
+            this.hands = [];
+            if (!this.el.components['xr-body']) this.el.setAttribute('xr-body', 'mode: collider');
+            var scene = this.el.sceneEl;
+            var bindHands = () => scene.querySelectorAll('[laser-controls],[hand-controls],[oculus-touch-controls],[hand-tracking-controls]').forEach((hand) => this.bind(hand));
+            if (scene.hasLoaded) bindHands();
+            else scene.addEventListener('loaded', bindHands);
+        },
+        bind: function (hand) {
+            if (this.hands.includes(hand)) return;
+            this.hands.push(hand);
+            var wanted = (button) => this.data.button === 'either' || this.data.button === button;
+            if (hand.hasAttribute('hand-tracking-controls')) {
+                hand.addEventListener('pinchstarted', (e) => this.take(hand, e.detail.position));
+                hand.addEventListener('pinchmoved', (e) => { if (this.by === hand) this.follow(e.detail.position); });
+                hand.addEventListener('pinchended', () => this.release(hand));
+            } else {
+                ['grip', 'trigger'].forEach((button) => {
+                    hand.addEventListener(button + 'down', () => wanted(button) && this.take(hand));
+                    hand.addEventListener(button + 'up', () => wanted(button) && this.release(hand));
+                });
+            }
+        },
+        take: function (hand, point) {
+            if (this.by) return;
+            var obj = this.el.object3D;
+            var p = point ? point.clone() : hand.object3D.getWorldPosition(new THREE.Vector3());
+            var raycaster = hand.components.raycaster;
+            var hit = (raycaster && raycaster.intersectedEls.includes(this.el)) || new THREE.Box3().setFromObject(obj).distanceToPoint(p) <= this.data.reach;
+            if (!hit) return;
+            this.by = hand;
+            if (point) this.offset.copy(obj.getWorldPosition(new THREE.Vector3())).sub(p);
+            else hand.object3D.attach(obj);
+            this.el.emit('grabbed', { hand: hand }, false);
+        },
+        follow: function (point) {
+            var obj = this.el.object3D;
+            var v = point.clone().add(this.offset);
+            obj.parent.worldToLocal(v);
+            obj.position.copy(v);
+        },
+        release: function (hand) {
+            if (this.by !== hand) return;
+            this.by = null;
+            if (!hand.hasAttribute('hand-tracking-controls')) this.el.sceneEl.object3D.attach(this.el.object3D);
+            AFRAME.xrDrop(this.el);
         }
     });
 })();
