@@ -839,23 +839,23 @@ canvas {
 
 .input-group {
     flex: 1;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(58px, max-content) minmax(0, 1fr);
     align-items: center;
-    gap: 7px;
+    column-gap: 8px;
     min-width: 0;
     background: var(--bg-light);
     border: 1px solid var(--border-color);
     border-radius: 4px;
-    padding: 2px 6px;
+    padding: 3px 6px;
 }
 
 .input-group span {
     font-size: 0.65rem;
     color: var(--text-secondary);
     width: auto;
-    min-width: 15px;
-    max-width: 46%;
-    flex: 0 0 auto;
+    min-width: 0;
+    max-width: none;
     line-height: 1.25;
     white-space: normal;
     overflow-wrap: anywhere;
@@ -864,7 +864,7 @@ canvas {
 .input-group input,
 .input-group select {
     min-width: 0;
-    flex: 1 1 auto;
+    width: 100%;
 }
 
 input[type="number"],
