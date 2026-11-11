@@ -920,6 +920,7 @@ export class UI {
                         asset.name,
                         `${asset.type} · #${asset.id}`,
                         [
+                            iconButton('fa-eye', 'Preview asset', () => this.openAssetPreviewDialog(asset)),
                             iconButton('fa-plus', 'Place in scene', () => assetSystem.addAssetToScene(asset.id)),
                             iconButton('fa-check', 'Use on selected element', () => {
                                 if (!assetSystem.applyAssetToSelected(asset.id)) this.showNotification('Select an A-Frame element first.', 'info');
@@ -1143,6 +1144,114 @@ export class UI {
         return { overlay, close, save: overlay.querySelector('[data-save]') };
     }
 
+    openAssetPreviewDialog(asset) {
+        if (!asset) return;
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay open';
+        overlay.innerHTML = `
+            <div class="modal editor-modal asset-preview-modal">
+                <div class="modal-title"></div>
+                <div class="modal-body">
+                    <div class="asset-preview-stage" data-preview-stage></div>
+                    <div class="asset-preview-meta" data-preview-meta></div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn" data-close>Close</button>
+                </div>
+            </div>
+        `;
+        overlay.querySelector('.modal-title').textContent = `Preview: ${asset.name}`;
+        overlay.querySelector('[data-preview-meta]').textContent = `${asset.type} · #${asset.id}`;
+        const stage = overlay.querySelector('[data-preview-stage]');
+        let stopMedia = () => {};
+        const close = () => {
+            stopMedia();
+            overlay.remove();
+        };
+        overlay.querySelector('[data-close]').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        document.body.appendChild(overlay);
+
+        if (asset.type === 'audio') {
+            const audio = document.createElement('audio');
+            audio.controls = true;
+            audio.autoplay = true;
+            audio.src = asset.src;
+            stage.appendChild(audio);
+            stopMedia = () => { audio.pause(); audio.removeAttribute('src'); audio.load(); };
+        } else if (asset.type === 'video') {
+            const video = document.createElement('video');
+            video.controls = true;
+            video.autoplay = true;
+            video.muted = true;
+            video.playsInline = true;
+            video.src = asset.src;
+            stage.appendChild(video);
+            stopMedia = () => { video.pause(); video.removeAttribute('src'); video.load(); };
+        } else if (asset.type === 'image' || asset.type === 'panorama') {
+            const image = document.createElement('img');
+            image.src = asset.src;
+            image.alt = asset.name;
+            stage.appendChild(image);
+        } else if (asset.type === 'model') {
+            this.renderModelPreview(stage, asset);
+        }
+
+    }
+
+    renderModelPreview(stage, asset) {
+        const scene = document.createElement('a-scene');
+        scene.setAttribute('embedded', '');
+        scene.setAttribute('renderer', 'antialias: true');
+        scene.setAttribute('background', 'color: #0b1220');
+        scene.setAttribute('vr-mode-ui', 'enabled: false');
+        scene.style.width = '100%';
+        scene.style.height = '430px';
+        scene.style.borderRadius = '8px';
+        scene.style.overflow = 'hidden';
+
+        const assets = document.createElement('a-assets');
+        const assetItem = document.createElement('a-asset-item');
+        const assetId = 'preview-model-' + Date.now();
+        assetItem.id = assetId;
+        assetItem.setAttribute('src', asset.src);
+        assets.appendChild(assetItem);
+        scene.appendChild(assets);
+
+        const camera = document.createElement('a-entity');
+        camera.setAttribute('camera', 'fov: 45');
+        camera.setAttribute('position', '0 1.4 3.5');
+        camera.setAttribute('look-controls', '');
+        scene.appendChild(camera);
+
+        const ambient = document.createElement('a-entity');
+        ambient.setAttribute('light', 'type: ambient; intensity: 0.9');
+        scene.appendChild(ambient);
+
+        const directional = document.createElement('a-entity');
+        directional.setAttribute('light', 'type: directional; intensity: 1.2');
+        directional.setAttribute('position', '2 4 3');
+        scene.appendChild(directional);
+
+        const model = document.createElement('a-gltf-model');
+        model.setAttribute('src', '#' + assetId);
+        model.setAttribute('position', '0 0 0');
+        model.setAttribute('animation', 'property: rotation; to: 0 360 0; dur: 12000; loop: true; easing: linear');
+        model.addEventListener('model-loaded', (event) => {
+            const THREE = window.AFRAME?.THREE;
+            if (!THREE || !event.detail?.model) return;
+            const box = new THREE.Box3().setFromObject(event.detail.model);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+            const max = Math.max(size.x, size.y, size.z) || 1;
+            const scale = 2.6 / max;
+            model.setAttribute('scale', `${scale} ${scale} ${scale}`);
+            model.setAttribute('position', `${-center.x * scale} ${-center.y * scale + 1.2} ${-center.z * scale}`);
+        });
+        scene.appendChild(model);
+        stage.appendChild(scene);
+    }
+
     openAssetEditDialog(asset) {
         if (!asset) return;
         const modal = this.createEditorModal(`Edit Asset: ${asset.name}`, `
@@ -1190,7 +1299,11 @@ export class UI {
                 audio.src = src;
                 preview.appendChild(audio);
             } else {
-                preview.innerHTML = '<span class="preview-empty">3D model asset</span>';
+                const btn = document.createElement('button');
+                btn.className = 'btn';
+                btn.innerHTML = '<i class="fas fa-cube"></i> Open 3D Preview';
+                btn.addEventListener('click', () => this.openAssetPreviewDialog(asset));
+                preview.appendChild(btn);
             }
         };
 

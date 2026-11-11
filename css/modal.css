@@ -304,3 +304,38 @@
     font-size: 0.75rem;
     padding: 20px;
 }
+
+/* Dedicated asset preview modal */
+.asset-preview-modal .modal-body {
+    padding-top: 14px;
+}
+
+.asset-preview-stage {
+    width: 100%;
+    min-height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #070b12;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.asset-preview-stage video,
+.asset-preview-stage img {
+    width: 100%;
+    max-height: 460px;
+    object-fit: contain;
+    background: #000;
+}
+
+.asset-preview-stage audio {
+    width: calc(100% - 32px);
+}
+
+.asset-preview-meta {
+    margin-top: 10px;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
