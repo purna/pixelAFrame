@@ -1854,3 +1854,186 @@ input[type="color"] {
     max-height: none;
     overflow: visible;
 }
+
+/* =============================================
+   HEADER PROJECT MENU
+   ============================================= */
+.header-menu {
+    position: relative;
+}
+
+.header-menu-list {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 210px;
+    background: var(--bg-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px;
+    z-index: 5000;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+}
+
+.header-menu.open .header-menu-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.header-menu-list button {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-primary);
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-size: 0.78rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.header-menu-list button:hover {
+    background: var(--bg-light);
+    border-color: var(--border-color);
+}
+
+.header-menu-list button i {
+    color: var(--accent-tertiary);
+    width: 16px;
+}
+
+.header-menu-list button.danger {
+    color: #ff8fab;
+}
+
+.header-menu-list button.danger i {
+    color: #ff6b9d;
+}
+
+.header-menu-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 4px 2px;
+}
+
+/* =============================================
+   EXPORT MODAL
+   ============================================= */
+.export-modal {
+    max-width: 560px;
+}
+
+.export-modal .modal-desc {
+    margin: 0 0 14px;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+
+.export-options {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.export-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    padding: 13px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 7px;
+    background: var(--bg-light);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.export-option:hover {
+    border-color: var(--accent-primary);
+    background: rgba(0, 255, 65, 0.06);
+    transform: translateY(-1px);
+}
+
+.export-option > i {
+    color: var(--accent-primary);
+    font-size: 1.15rem;
+    margin-top: 2px;
+    width: 22px;
+    text-align: center;
+}
+
+.export-option span {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.export-option strong {
+    font-size: 0.85rem;
+}
+
+.export-option small {
+    color: var(--text-secondary);
+    font-size: 0.73rem;
+    line-height: 1.4;
+}
+
+/* =============================================
+   COLLAPSIBLE SCENE SETTINGS
+   ============================================= */
+.panel-header-actions {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.collapsible-section {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.collapsible-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    cursor: pointer;
+    background: var(--bg-dark);
+    transition: background 0.2s;
+    user-select: none;
+}
+
+.collapsible-header:hover {
+    background: var(--bg-medium);
+}
+
+.collapsible-header span {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.collapsible-header i {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    transition: transform 0.2s;
+}
+
+.collapsible-header.collapsed i {
+    transform: rotate(-90deg);
+}
+
+.collapsible-content {
+    padding: 8px 14px 12px;
+    background: var(--bg-darkest, #0d1117);
+}
+
+.scene-settings-panel {
+    padding: 0;
+}

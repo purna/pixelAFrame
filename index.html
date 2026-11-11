@@ -76,13 +76,18 @@
             <button class="btn" id="btn-enter-vr" title="Enter VR (F5)"><i class="fas fa-vr-cardboard"></i> VR</button>
             <button class="btn" id="btn-enter-ar" title="Enter AR"><i class="fas fa-mobile-alt"></i> AR</button>
             <div class="separator" style="height: 20px; width: 1px; margin: 0 10px;"></div>
-            <button class="btn" id="btn-clear"><i class="fas fa-trash-alt"></i> Clear</button>
+            <div class="header-menu">
+                <button class="btn" id="btn-project-menu" title="Project actions"><i class="fas fa-folder"></i> Project <i class="fas fa-chevron-down"></i></button>
+                <div class="header-menu-list" id="project-menu-list">
+                    <button id="btn-save"><i class="fas fa-save"></i> Save to Browser</button>
+                    <button id="btn-load"><i class="fas fa-folder-open"></i> Open Project File</button>
+                    <button id="btn-load-browser"><i class="fas fa-cloud-upload-alt"></i> Load from Browser</button>
+                    <div class="header-menu-divider"></div>
+                    <button id="btn-clear" class="danger"><i class="fas fa-trash-alt"></i> Clear Scene</button>
+                </div>
+            </div>
+            <button class="btn primary" id="btn-export"><i class="fas fa-download"></i> Export</button>
             <input type="file" id="file-input" accept=".json" style="display:none">
-            <button class="btn" id="btn-load"><i class="fas fa-folder-open"></i> Load</button>
-            <button class="btn" id="btn-load-browser"><i class="fas fa-cloud-upload-alt"></i> Load from Browser</button>
-            <button class="btn primary" id="btn-save"><i class="fas fa-save"></i> Save to Browser</button>
-            <button class="btn" id="btn-export-json"><i class="fas fa-file-code"></i> Export JSON</button>
-            <button class="btn" id="btn-export"><i class="fas fa-file-zipper"></i> Export ZIP</button>
         </div>
     </header>
 
@@ -483,77 +488,56 @@ Add VR-ready elements">
                 </div>
 
                 <div class="right-tab-content" id="tab-scene">
-                    <!-- Scene Section -->
                     <div id="scene-section" class="scene-section">
                         <div class="panel-header">
                             <div class="panel-header-title"><i class="fas fa-image"></i> Scene</div>
-                </div>
-                <div id="scene-content" class="panel-content">
-                    <!-- Export Settings -->
-                    <div class="property-group">
-                        <div class="property-label">Export Settings</div>
-
-                        <!-- Canvas Size Controls -->
-                        <div class="property-group">
-                            <div class="property-label">Canvas Size</div>
-                            <select id="export-resolution"
-                                style="background: var(--bg-light); border: 1px solid var(--border-color); border-radius: 4px; padding: 6px 10px; font-size: 0.8rem; color: var(--text-primary); width: 100%; margin-top: 6px;">
-                                <!-- Game Asset Sizes -->
-                                <option value="24x24">24×24 - Game Icon</option>
-                                <option value="36x36">36×36 - Game Icon</option>
-                                <option value="48x48">48×48 - Game Icon</option>
-                                <option value="128x128">128×128 - Game Sprite</option>
-                                <option value="512x512">512×512 - Game Texture</option>
-                                <option value="1024x1024">1024×1024 - High-res Texture</option>
-
-                                <!-- Standard Resolutions -->
-                                <option value="1920x1080" selected>1920×1080 - Full HD</option>
-                                <option value="2560x1440">2560×1440 - 2K</option>
-                                <option value="3840x2160">3840×2160 - 4K</option>
-                                <option value="custom">Custom Size</option>
-                            </select>
+                            <div class="panel-header-actions">
+                                <button class="btn icon-only" id="scene-expand-all" title="Expand all"><i class="fas fa-expand-alt"></i></button>
+                                <button class="btn icon-only" id="scene-collapse-all" title="Collapse all"><i class="fas fa-compress-alt"></i></button>
+                            </div>
                         </div>
-
-                        <!-- Camera Border Toggle -->
-                        <div class="property-group">
-                            <label class="property-label">
-                                <input type="checkbox" id="show-camera-border" checked>
-                                Show Camera Border
-                            </label>
-                        </div>
-
-                        <!-- Custom Resolution Group (hidden by default) -->
-                        <div class="property-group" id="custom-resolution-group" style="display: none;">
-                            <label class="property-label">
-                                Custom Width:
-                                <input type="number" id="export-width" value="1920" min="100" max="8000">
-                            </label>
-                            <label class="property-label">
-                                Custom Height:
-                                <input type="number" id="export-height" value="1080" min="100" max="8000">
-                            </label>
-                        </div>
-
-                        <!-- Export Button -->
-                        <button class="btn primary" id="btn-export-png" style="width: 100%; margin-top: 10px;">
-                            <i class="fas fa-download"></i> Export as PNG
-                        </button>
-                    </div>
-
-                    <!-- Camera Border Visualization -->
-                    <div class="property-group">
-                        <div class="property-label">Camera Border Preview</div>
-                        <div id="camera-border-preview"
-                            style="width: 100%; height: 200px; background: rgba(0, 217, 255, 0.1); border: 1px dashed var(--accent-tertiary); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 0.8rem; cursor: move;">
-                            Camera border visualization will appear here
-                        </div>
-                    </div>
-                        </div>
+                        <div id="scene-content" class="panel-content scene-settings-panel"></div>
                     </div>
                 </div>
             </div>
         </div>
 
+    </div>
+
+    <!-- EXPORT MODAL -->
+    <div class="modal-overlay" id="export-modal">
+        <div class="modal export-modal">
+            <div class="modal-title">
+                <i class="fas fa-download"></i> Export Project
+            </div>
+            <p class="modal-desc">Choose how you want to save your A-Frame project.</p>
+            <div class="export-options">
+                <button class="export-option" data-export="html">
+                    <i class="fas fa-file-code"></i>
+                    <span>
+                        <strong>HTML file</strong>
+                        <small>Single .html file with the scene, behaviours and embedded assets.</small>
+                    </span>
+                </button>
+                <button class="export-option" data-export="zip">
+                    <i class="fas fa-file-zipper"></i>
+                    <span>
+                        <strong>HTML + Assets (.zip)</strong>
+                        <small>A folder containing index.html, assets and project data.</small>
+                    </span>
+                </button>
+                <button class="export-option" data-export="json">
+                    <i class="fas fa-file-code"></i>
+                    <span>
+                        <strong>Project JSON</strong>
+                        <small>Editable scene data that can be loaded back into the editor.</small>
+                    </span>
+                </button>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" id="btn-export-cancel">Cancel</button>
+            </div>
+        </div>
     </div>
 
     <!-- AI MODAL -->
@@ -674,15 +658,31 @@ Add VR-ready elements">
                         <div class="settings-section">
                             <div class="section-heading">Background Settings</div>
                             <div class="property-group">
-                                <label class="property-label">
-                                    <input type="checkbox" id="setting-background-enabled" checked>
-                                    Enable Custom Background
-                                </label>
+                                <label class="property-label"><input type="checkbox" id="setting-background-enabled" checked> Enable Custom Background</label>
+                                <label class="property-label">Background Color: <input type="color" id="setting-background-color" value="#1a1a2e"></label>
+                            </div>
+                            <div class="property-group">
+                                <label class="property-label"><input type="checkbox" id="setting-background-gradient"> Use Gradient Background</label>
+                                <label class="property-label">Gradient Top Color: <input type="color" id="setting-background-top" value="#1a1a2e"></label>
+                                <label class="property-label">Gradient Bottom Color: <input type="color" id="setting-background-bottom" value="#0b1220"></label>
+                            </div>
+                        </div>
 
-                                <label class="property-label">
-                                    Background Color:
-                                    <input type="color" id="setting-background-color" value="#1a1a2e">
-                                </label>
+                        <!-- Fog Settings Group -->
+                        <div class="settings-section">
+                            <div class="section-heading">Fog Settings</div>
+                            <div class="property-group">
+                                <label class="property-label"><input type="checkbox" id="setting-fog-enabled"> Enable Fog</label>
+                                <label class="property-label">Fog Color: <input type="color" id="setting-fog-color" value="#1a1a2e"></label>
+                                <label class="property-label"><input type="checkbox" id="setting-fog-match-background"> Match Fog to Background</label>
+                            </div>
+                            <div class="property-group has-slider">
+                                <label class="property-label">Fog Near: <span id="fog-near-value">30</span></label>
+                                <input type="range" id="setting-fog-near" min="0" max="200" step="1" value="30">
+                            </div>
+                            <div class="property-group has-slider">
+                                <label class="property-label">Fog Far: <span id="fog-far-value">100</span></label>
+                                <input type="range" id="setting-fog-far" min="1" max="500" step="1" value="100">
                             </div>
                         </div>
 
@@ -690,15 +690,35 @@ Add VR-ready elements">
                         <div class="settings-section">
                             <div class="section-heading">Lighting Settings</div>
                             <div class="property-group">
-                                <label class="property-label">
-                                    <input type="checkbox" id="setting-ambient-light" checked>
-                                    Enable Ambient Light
-                                </label>
+                                <label class="property-label"><input type="checkbox" id="setting-ambient-light" checked> Enable Ambient Light</label>
+                                <label class="property-label">Ambient Light Color: <input type="color" id="setting-ambient-color" value="#ffffff"></label>
                             </div>
+                            <div class="property-group has-slider">
+                                <label class="property-label">Ambient Intensity: <span id="ambient-intensity-value">1.0</span></label>
+                                <input type="range" id="setting-ambient-intensity" min="0" max="3" step="0.1" value="1">
+                            </div>
+                        </div>
+
+                        <!-- Sky Settings Group -->
+                        <div class="settings-section">
+                            <div class="section-heading">Sky Settings</div>
                             <div class="property-group">
-                                <label class="property-label">
-                                    Ambient Light Color:
-                                    <input type="color" id="setting-ambient-color" value="#ffffff">
+                                <label class="property-label">Sky Color: <input type="color" id="setting-sky-color" value="#1a1a2e"></label>
+                                <label class="property-label">Sky Image URL: <input type="text" id="setting-sky-image" placeholder="https://..."></label>
+                            </div>
+                        </div>
+
+                        <!-- Ambient Shadows Group -->
+                        <div class="settings-section">
+                            <div class="section-heading">Ambient Shadows</div>
+                            <div class="property-group">
+                                <label class="property-label"><input type="checkbox" id="setting-shadow-enabled"> Enable Shadows</label>
+                                <label class="property-label">Shadow Quality:
+                                    <select id="setting-shadow-type" class="component-select">
+                                        <option value="basic">Basic</option>
+                                        <option value="pcf">PCF</option>
+                                        <option value="pcfsoft" selected>PCF Soft</option>
+                                    </select>
                                 </label>
                             </div>
                         </div>

@@ -359,8 +359,19 @@ export class FileManager {
         // Add index.html to zip
         zip.file('index.html', htmlContent);
         
-        // Create assets folder structure (empty for now - assets would need to be copied)
+        // Add reusable assets that were uploaded as data URLs.
         const assets = zip.folder('assets');
+        const zipAssets = this.app.assetSystem?.getZipAssets() || [];
+        zipAssets.forEach(asset => {
+            assets.file(asset.filename, asset.content, asset.base64 ? { base64: true } : undefined);
+        });
+
+        // Project data for re-importing into the editor.
+        zip.file('project.json', JSON.stringify({
+            entities,
+            assets: this.app.assetSystem?.getAssets() || [],
+            mixins: this.app.mixinSystem?.getMixins() || []
+        }, null, 2));
         
         // Create css folder with basic styles
         const css = zip.folder('css');
@@ -385,6 +396,20 @@ export class FileManager {
         });
     }
     
+    // Export a single standalone HTML file (assets are embedded as data URLs).
+    exportHTMLFile() {
+        const entities = this.app.aframeManager?.getEntities() || [];
+        const htmlContent = this.generateAFrameHTML(entities);
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'aframe-scene.html';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        if (this.app.ui) this.app.ui.showNotification('HTML file exported!', 'success');
+    }
+
     // Fallback: export as single HTML file
     exportAsSingleHTML(entities) {
         const htmlContent = this.generateAFrameHTML(entities);

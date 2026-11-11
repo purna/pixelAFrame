@@ -149,6 +149,35 @@ export class AFrameAssetSystem {
         return true;
     }
 
+    getZipAssets() {
+        const extensionFor = (asset, mime = '') => {
+            if (asset.type === 'model') return '.glb';
+            if (asset.type === 'audio') return mime.includes('ogg') ? '.ogg' : mime.includes('wav') ? '.wav' : '.mp3';
+            if (asset.type === 'video') return mime.includes('webm') ? '.webm' : '.mp4';
+            if (mime.includes('jpeg')) return '.jpg';
+            if (mime.includes('png')) return '.png';
+            if (mime.includes('webp')) return '.webp';
+            if (mime.includes('gif')) return '.gif';
+            return '.img';
+        };
+
+        return this.assets.map(asset => {
+            const src = asset.src || '';
+            if (src.startsWith('data:')) {
+                const match = src.match(/^data:([^;,]+)?(;base64)?,(.*)$/s);
+                if (match) {
+                    const mime = match[1] || '';
+                    return {
+                        filename: safeId(asset.id || asset.name || asset.type) + extensionFor(asset, mime),
+                        content: match[3],
+                        base64: !!match[2]
+                    };
+                }
+            }
+            return null;
+        }).filter(Boolean);
+    }
+
     getExportHTML() {
         return this.assets.map(asset => {
             const tag = this.getElementTag(asset.type);

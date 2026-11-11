@@ -121,16 +121,41 @@ export class UI {
                 this.showNotification('Scene saved to browser!', 'success');
             }
         });
-        document.getElementById('btn-export-json').addEventListener('click', () => {
+        document.getElementById('btn-export-json')?.addEventListener('click', () => {
             if (this.app.fileManager) {
                 this.app.fileManager.saveScene();
                 this.showNotification('Scene exported as JSON!', 'success');
             }
         });
-        document.getElementById('btn-export').addEventListener('click', () => {
-            if (this.app.fileManager) {
-                this.app.fileManager.exportAsAFrameHTML();
-            }
+        document.getElementById('btn-export').addEventListener('click', () => this.openExportModal());
+
+        // Project menu
+        const projectMenu = document.getElementById('btn-project-menu');
+        const projectMenuList = document.getElementById('project-menu-list');
+        if (projectMenu && projectMenuList) {
+            projectMenu.addEventListener('click', (e) => {
+                e.stopPropagation();
+                projectMenuList.parentElement.classList.toggle('open');
+            });
+            projectMenuList.querySelectorAll('button').forEach(button => {
+                button.addEventListener('click', () => {
+                    projectMenuList.parentElement.classList.remove('open');
+                });
+            });
+            document.addEventListener('click', (e) => {
+                if (!projectMenuList.parentElement.contains(e.target)) {
+                    projectMenuList.parentElement.classList.remove('open');
+                }
+            });
+        }
+
+        // Export modal
+        document.getElementById('btn-export-cancel')?.addEventListener('click', () => this.closeExportModal());
+        document.getElementById('export-modal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'export-modal') this.closeExportModal();
+        });
+        document.querySelectorAll('.export-option').forEach(option => {
+            option.addEventListener('click', () => this.handleExportOption(option.dataset.export));
         });
         document.getElementById('btn-load').addEventListener('click', () => {
             document.getElementById('file-input').click();
@@ -460,93 +485,217 @@ export class UI {
     }
 
     resetSceneSettings() {
-        // Reset to default values from config or use hardcoded defaults
-        const defaults = (typeof APP_DEFAULTS !== 'undefined' && APP_DEFAULTS.scene)
-            ? APP_DEFAULTS.scene
-            : {
-                backgroundEnabled: true,
-                backgroundColor: '#1a1a2e',
-                ambientLight: true,
-                ambientColor: '#ffffff',
-                exportTransparent: false,
-                exportResolution: '1920x1080',
-                customWidth: 1920,
-                customHeight: 1080
-            };
+        const defaults = {
+            backgroundEnabled: true,
+            backgroundColor: '#1a1a2e',
+            backgroundGradient: false,
+            backgroundTop: '#1a1a2e',
+            backgroundBottom: '#0b1220',
+            fogEnabled: false,
+            fogColor: '#1a1a2e',
+            fogNear: 30,
+            fogFar: 100,
+            fogMatchBackground: false,
+            ambientLight: true,
+            ambientColor: '#ffffff',
+            ambientIntensity: 1,
+            skyColor: '#1a1a2e',
+            skyImage: '',
+            shadowEnabled: false,
+            shadowType: 'pcfsoft',
+            exportTransparent: false,
+            exportResolution: '1920x1080',
+            customWidth: 1920,
+            customHeight: 1080
+        };
 
-        // Apply defaults to UI
-        document.getElementById('setting-background-enabled').checked = defaults.backgroundEnabled;
-        document.getElementById('setting-background-color').value = defaults.backgroundColor;
-        document.getElementById('setting-ambient-light').checked = defaults.ambientLight;
-        document.getElementById('setting-ambient-color').value = defaults.ambientColor;
-        document.getElementById('setting-export-transparent').checked = defaults.exportTransparent;
-        document.getElementById('setting-export-resolution').value = defaults.exportResolution;
-        document.getElementById('setting-custom-width').value = defaults.customWidth;
-        document.getElementById('setting-custom-height').value = defaults.customHeight;
+        const set = (id, value, prop = 'value') => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (prop === 'checked') el.checked = !!value;
+                else el.value = value;
+            }
+        };
 
-        // Hide custom resolution group if not custom
-        document.getElementById('custom-resolution-group').style.display = 'none';
+        set('setting-background-enabled', defaults.backgroundEnabled, 'checked');
+        set('setting-background-color', defaults.backgroundColor);
+        set('setting-background-gradient', defaults.backgroundGradient, 'checked');
+        set('setting-background-top', defaults.backgroundTop);
+        set('setting-background-bottom', defaults.backgroundBottom);
+        set('setting-fog-enabled', defaults.fogEnabled, 'checked');
+        set('setting-fog-color', defaults.fogColor);
+        set('setting-fog-near', defaults.fogNear);
+        set('setting-fog-far', defaults.fogFar);
+        set('setting-fog-match-background', defaults.fogMatchBackground, 'checked');
+        set('setting-ambient-light', defaults.ambientLight, 'checked');
+        set('setting-ambient-color', defaults.ambientColor);
+        set('setting-ambient-intensity', defaults.ambientIntensity);
+        set('setting-sky-color', defaults.skyColor);
+        set('setting-sky-image', defaults.skyImage);
+        set('setting-shadow-enabled', defaults.shadowEnabled, 'checked');
+        set('setting-shadow-type', defaults.shadowType);
+        set('setting-export-transparent', defaults.exportTransparent, 'checked');
+        set('setting-export-resolution', defaults.exportResolution);
+        set('setting-custom-width', defaults.customWidth);
+        set('setting-custom-height', defaults.customHeight);
 
+        this.updateSettingsRangeLabels();
+        const customGroup = document.getElementById('custom-resolution-group');
+        if (customGroup) customGroup.style.display = 'none';
         this.showNotification('Scene settings reset to defaults!', 'success');
+    }
+
+    updateSettingsRangeLabels() {
+        const pairs = [
+            ['setting-autosave-interval', 'autosave-interval-value'],
+            ['setting-camera-speed', 'camera-speed-value'],
+            ['setting-fog-near', 'fog-near-value'],
+            ['setting-fog-far', 'fog-far-value'],
+            ['setting-ambient-intensity', 'ambient-intensity-value']
+        ];
+        pairs.forEach(([inputId, labelId]) => {
+            const input = document.getElementById(inputId);
+            const label = document.getElementById(labelId);
+            if (input && label) label.textContent = input.value;
+        });
     }
 
     loadSceneSettingsToUI() {
         const saved = localStorage.getItem('pixel3d-scene-settings');
-        if (saved) {
-            const settings = JSON.parse(saved);
+        const defaults = {
+            backgroundEnabled: true,
+            backgroundColor: '#1a1a2e',
+            backgroundGradient: false,
+            backgroundTop: '#1a1a2e',
+            backgroundBottom: '#0b1220',
+            fogEnabled: false,
+            fogColor: '#1a1a2e',
+            fogNear: 30,
+            fogFar: 100,
+            fogMatchBackground: false,
+            ambientLight: true,
+            ambientColor: '#ffffff',
+            ambientIntensity: 1,
+            skyColor: '#1a1a2e',
+            skyImage: '',
+            shadowEnabled: false,
+            shadowType: 'pcfsoft',
+            exportTransparent: false,
+            exportResolution: '1920x1080',
+            customWidth: 1920,
+            customHeight: 1080
+        };
+        const settings = saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
 
-            // Set UI values
-            const bgEnabledEl = document.getElementById('setting-background-enabled');
-            const bgColorEl = document.getElementById('setting-background-color');
-            const ambientEl = document.getElementById('setting-ambient-light');
-            const ambientColorEl = document.getElementById('setting-ambient-color');
-            const transparentEl = document.getElementById('setting-export-transparent');
-            const resolutionEl = document.getElementById('setting-export-resolution');
-            const customWidthEl = document.getElementById('setting-custom-width');
-            const customHeightEl = document.getElementById('setting-custom-height');
+        const set = (id, value, prop = 'value') => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (prop === 'checked') el.checked = !!value;
+            else el.value = value;
+        };
 
-            if (bgEnabledEl) bgEnabledEl.checked = settings.backgroundEnabled !== false;
-            if (bgColorEl) bgColorEl.value = settings.backgroundColor || '#1a1a2e';
-            if (ambientEl) ambientEl.checked = settings.ambientLight !== false;
-            if (ambientColorEl) ambientColorEl.value = settings.ambientColor || '#ffffff';
-            if (transparentEl) transparentEl.checked = settings.exportTransparent !== false;
-            if (resolutionEl) resolutionEl.value = settings.exportResolution || '1920x1080';
-            if (customWidthEl) customWidthEl.value = settings.customWidth || 1920;
-            if (customHeightEl) customHeightEl.value = settings.customHeight || 1080;
+        set('setting-background-enabled', settings.backgroundEnabled, 'checked');
+        set('setting-background-color', settings.backgroundColor);
+        set('setting-background-gradient', settings.backgroundGradient, 'checked');
+        set('setting-background-top', settings.backgroundTop);
+        set('setting-background-bottom', settings.backgroundBottom);
+        set('setting-fog-enabled', settings.fogEnabled, 'checked');
+        set('setting-fog-color', settings.fogColor);
+        set('setting-fog-near', settings.fogNear);
+        set('setting-fog-far', settings.fogFar);
+        set('setting-fog-match-background', settings.fogMatchBackground, 'checked');
+        set('setting-ambient-light', settings.ambientLight, 'checked');
+        set('setting-ambient-color', settings.ambientColor);
+        set('setting-ambient-intensity', settings.ambientIntensity);
+        set('setting-sky-color', settings.skyColor);
+        set('setting-sky-image', settings.skyImage);
+        set('setting-shadow-enabled', settings.shadowEnabled, 'checked');
+        set('setting-shadow-type', settings.shadowType);
+        set('setting-export-transparent', settings.exportTransparent, 'checked');
+        set('setting-export-resolution', settings.exportResolution);
+        set('setting-custom-width', settings.customWidth);
+        set('setting-custom-height', settings.customHeight);
 
-            // Update custom resolution group visibility
-            const customGroup = document.getElementById('custom-resolution-group');
-            if (customGroup && resolutionEl) {
-                customGroup.style.display = resolutionEl.value === 'custom' ? 'block' : 'none';
-            }
+        this.updateSettingsRangeLabels();
+        const customGroup = document.getElementById('custom-resolution-group');
+        if (customGroup) {
+            customGroup.style.display = settings.exportResolution === 'custom' ? 'block' : 'none';
         }
     }
 
     applySceneSettings() {
         const settings = {
-            backgroundEnabled: document.getElementById('setting-background-enabled').checked,
-            backgroundColor: document.getElementById('setting-background-color').value,
-            ambientLight: document.getElementById('setting-ambient-light').checked,
-            ambientColor: document.getElementById('setting-ambient-color').value,
-            exportTransparent: document.getElementById('setting-export-transparent').checked,
-            exportResolution: document.getElementById('setting-export-resolution').value,
-            customWidth: parseInt(document.getElementById('setting-custom-width').value),
-            customHeight: parseInt(document.getElementById('setting-custom-height').value)
+            backgroundEnabled: document.getElementById('setting-background-enabled')?.checked ?? true,
+            backgroundColor: document.getElementById('setting-background-color')?.value || '#1a1a2e',
+            backgroundGradient: document.getElementById('setting-background-gradient')?.checked ?? false,
+            backgroundTop: document.getElementById('setting-background-top')?.value || '#1a1a2e',
+            backgroundBottom: document.getElementById('setting-background-bottom')?.value || '#0b1220',
+            fogEnabled: document.getElementById('setting-fog-enabled')?.checked ?? false,
+            fogColor: document.getElementById('setting-fog-color')?.value || '#1a1a2e',
+            fogNear: Number(document.getElementById('setting-fog-near')?.value || 30),
+            fogFar: Number(document.getElementById('setting-fog-far')?.value || 100),
+            fogMatchBackground: document.getElementById('setting-fog-match-background')?.checked ?? false,
+            ambientLight: document.getElementById('setting-ambient-light')?.checked ?? true,
+            ambientColor: document.getElementById('setting-ambient-color')?.value || '#ffffff',
+            ambientIntensity: Number(document.getElementById('setting-ambient-intensity')?.value || 1),
+            skyColor: document.getElementById('setting-sky-color')?.value || '#1a1a2e',
+            skyImage: document.getElementById('setting-sky-image')?.value || '',
+            shadowEnabled: document.getElementById('setting-shadow-enabled')?.checked ?? false,
+            shadowType: document.getElementById('setting-shadow-type')?.value || 'pcfsoft',
+            exportTransparent: document.getElementById('setting-export-transparent')?.checked ?? false,
+            exportResolution: document.getElementById('setting-export-resolution')?.value || '1920x1080',
+            customWidth: parseInt(document.getElementById('setting-custom-width')?.value || 1920),
+            customHeight: parseInt(document.getElementById('setting-custom-height')?.value || 1080)
         };
 
-        // Save settings
+        if (settings.fogMatchBackground) settings.fogColor = settings.backgroundColor;
         localStorage.setItem('pixel3d-scene-settings', JSON.stringify(settings));
 
-        // Apply settings to the scene
+        // Three.js settings
         if (this.app.setBackgroundColor) {
             this.app.setBackgroundColor(settings.backgroundEnabled ? settings.backgroundColor : null);
         }
-
         if (this.app.setAmbientLight) {
             this.app.setAmbientLight(settings.ambientLight, settings.ambientColor);
         }
 
-        // Store export settings for later use
+        // A-Frame settings
+        const scene = document.getElementById('aframe-scene');
+        const globals = this.app.globalsSystem;
+        if (globals) {
+            if (settings.backgroundEnabled) {
+                globals.set('background', { color: settings.backgroundColor });
+            } else {
+                globals.remove('background');
+            }
+            if (settings.fogEnabled) {
+                globals.set('fog', {
+                    type: 'linear',
+                    color: settings.fogColor,
+                    near: settings.fogNear,
+                    far: settings.fogFar
+                });
+            } else {
+                globals.remove('fog');
+            }
+            globals.setShadows(settings.shadowEnabled, settings.shadowType);
+        }
+
+        const ambient = scene?.querySelector('a-light[type="ambient"]') || scene?.querySelector('a-light');
+        if (ambient) {
+            ambient.setAttribute('visible', settings.ambientLight);
+            ambient.setAttribute('color', settings.ambientColor);
+            ambient.setAttribute('intensity', settings.ambientIntensity);
+        }
+
+        let sky = scene?.querySelector('a-sky');
+        if (!sky) sky = this.app.aframeManager?.addEntity('a-sky', { color: settings.skyColor });
+        if (sky) {
+            sky.setAttribute('color', settings.skyColor);
+            if (settings.skyImage) sky.setAttribute('src', settings.skyImage);
+            else sky.removeAttribute('src');
+        }
+
         window.exportSettings = {
             transparent: settings.exportTransparent,
             resolution: settings.exportResolution,
@@ -590,7 +739,7 @@ export class UI {
         } else if (tabId === 'scene') {
             const scene = document.getElementById('scene-section');
             if (scene) scene.style.display = 'block';
-            this.initSceneExport();
+            this.renderSceneSettingsPanel();
         }
     }
 
@@ -657,16 +806,19 @@ export class UI {
         btn.setAttribute('aria-expanded', 'true');
 
         const margin = 8;
-        const maxHeight = window.innerHeight - margin * 2;
-        submenu.style.maxHeight = `${maxHeight}px`;
+        const header = document.querySelector('header');
+        const minTop = Math.max(margin, (header?.getBoundingClientRect().bottom || 0) + 8);
+        const availableHeight = Math.max(120, window.innerHeight - minTop - margin);
+
+        submenu.style.maxHeight = `${availableHeight}px`;
 
         const btnRect = btn.getBoundingClientRect();
-        const menuHeight = Math.min(submenu.scrollHeight, maxHeight);
+        const menuHeight = Math.min(submenu.scrollHeight, availableHeight);
 
-        // Keep the menu inside the viewport, scrolling internally when it is
-        // taller than the available space (important for the A-Frame menu).
+        // Keep the menu inside the viewport and below the header, scrolling
+        // internally when it is taller than the available space.
         let top = btnRect.top + btnRect.height / 2 - 24;
-        top = Math.max(margin, Math.min(top, window.innerHeight - menuHeight - margin));
+        top = Math.max(minTop, Math.min(top, window.innerHeight - menuHeight - margin));
 
         const arrowTop = Math.max(
             8,
@@ -879,6 +1031,31 @@ export class UI {
     }
 
     // --- AI MODAL LOGIC ---
+    openExportModal() {
+        const modal = document.getElementById('export-modal');
+        if (modal) modal.classList.add('open');
+    }
+
+    closeExportModal() {
+        const modal = document.getElementById('export-modal');
+        if (modal) modal.classList.remove('open');
+    }
+
+    handleExportOption(option) {
+        this.closeExportModal();
+        const fileManager = this.app.fileManager;
+        if (!fileManager) return;
+
+        if (option === 'html') {
+            fileManager.exportHTMLFile();
+        } else if (option === 'zip') {
+            fileManager.exportAsAFrameHTML();
+        } else if (option === 'json') {
+            fileManager.saveScene();
+            this.showNotification('Project JSON exported!', 'success');
+        }
+    }
+
     openAIModal(mode) {
         this.currentAIMode = mode;
         this.promptInput.value = '';
@@ -2492,6 +2669,244 @@ export class UI {
         }, 3000);
     }
 
+    renderSceneSettingsPanel() {
+        const container = document.getElementById('scene-content');
+        const scene = document.getElementById('aframe-scene');
+        const globals = this.app.globalsSystem;
+        if (!container) return;
+
+        container.innerHTML = '';
+        if (!this._sceneCollapsedSections) this._sceneCollapsedSections = new Set();
+
+        const fog = globals?.get('fog') || scene?.getAttribute('fog') || {};
+        const background = globals?.get('background') || {};
+        const environment = globals?.get('environment') || {};
+        const skyEl = scene?.querySelector('a-sky');
+        const ambient = scene?.querySelector('a-light[type="ambient"]') || scene?.querySelector('a-light');
+        const camera = scene?.querySelector('a-camera');
+        const cameraRig = camera?.parentElement?.id?.includes('camera-rig') ? camera.parentElement : camera;
+        const shadowEnabled = !!scene?.hasAttribute('shadow');
+
+        const addSection = (id, title, build) => {
+            const section = document.createElement('div');
+            section.className = 'collapsible-section';
+            const header = document.createElement('div');
+            header.className = 'collapsible-header';
+            header.innerHTML = `<span>${title}</span><i class="fas fa-chevron-down"></i>`;
+            const content = document.createElement('div');
+            content.className = 'collapsible-content';
+            const collapsed = this._sceneCollapsedSections.has(id);
+            content.style.display = collapsed ? 'none' : 'block';
+            header.classList.toggle('collapsed', collapsed);
+            header.addEventListener('click', () => {
+                const hidden = content.style.display === 'none';
+                content.style.display = hidden ? 'block' : 'none';
+                header.classList.toggle('collapsed', !hidden);
+                if (hidden) this._sceneCollapsedSections.delete(id);
+                else this._sceneCollapsedSections.add(id);
+            });
+            build(content);
+            section.appendChild(header);
+            section.appendChild(content);
+            container.appendChild(section);
+        };
+
+        const addCheckbox = (parent, label, checked, onChange) => {
+            const group = document.createElement('div');
+            group.className = 'property-group';
+            group.innerHTML = `<label class="property-label"><input type="checkbox" ${checked ? 'checked' : ''}> ${label}</label>`;
+            group.querySelector('input').addEventListener('change', e => onChange(e.target.checked));
+            parent.appendChild(group);
+        };
+
+        const addInput = (parent, label, type, value, onChange, attrs = '') => {
+            const group = document.createElement('div');
+            group.className = 'property-group';
+            group.innerHTML = `<label class="property-label">${label}<input type="${type}" value="${value ?? ''}" ${attrs}></label>`;
+            group.querySelector('input').addEventListener('change', e => onChange(type === 'number' ? Number(e.target.value) : e.target.value));
+            parent.appendChild(group);
+            return group.querySelector('input');
+        };
+
+        const addSelect = (parent, label, options, value, onChange) => {
+            const group = document.createElement('div');
+            group.className = 'property-group';
+            const select = document.createElement('select');
+            select.className = 'component-select';
+            options.forEach(optionValue => {
+                const option = document.createElement('option');
+                option.value = optionValue;
+                option.textContent = optionValue;
+                select.appendChild(option);
+            });
+            select.value = value;
+            select.addEventListener('change', () => onChange(select.value));
+            group.innerHTML = `<label class="property-label">${label}</label>`;
+            group.appendChild(select);
+            parent.appendChild(group);
+            return select;
+        };
+
+        const applyFog = () => {
+            if (!fogEnabled.checked) {
+                scene?.removeAttribute('fog');
+                return;
+            }
+            scene?.setAttribute('fog', {
+                type: fogType.value,
+                color: fogColor.value,
+                near: Number(fogNear.value),
+                far: Number(fogFar.value),
+                density: Number(fogDensity.value)
+            });
+        };
+
+        let fogEnabled, fogColor, fogNear, fogFar, fogDensity, fogType;
+
+        addSection('scene', 'Scene', body => {
+            const savedTitle = localStorage.getItem('pixelAFrame-scene-title') || 'My Scene';
+            addInput(body, 'Scene Title', 'text', savedTitle, value => {
+                localStorage.setItem('pixelAFrame-scene-title', value);
+                document.title = `${value} - Pixel AFrame`;
+            });
+            addCheckbox(body, 'Ambient Occlusion', localStorage.getItem('pixelAFrame-ao') === 'true', value => {
+                localStorage.setItem('pixelAFrame-ao', value ? 'true' : 'false');
+                this.showNotification(`Ambient occlusion ${value ? 'enabled' : 'disabled'} (preview setting)`, 'info');
+            });
+            addCheckbox(body, 'Bloom Effect', localStorage.getItem('pixelAFrame-bloom') === 'true', value => {
+                localStorage.setItem('pixelAFrame-bloom', value ? 'true' : 'false');
+                this.showNotification(`Bloom ${value ? 'enabled' : 'disabled'} (preview setting)`, 'info');
+            });
+        });
+
+        addSection('camera', 'Play Camera', body => {
+            const fov = camera?.getAttribute('camera')?.fov || 80;
+            addInput(body, 'Field of view', 'number', fov, value => {
+                camera?.setAttribute('camera', 'fov', value);
+            }, 'min="30" max="120" step="1"');
+            const pos = cameraRig?.getAttribute('position') || { y: 1.6 };
+            addInput(body, 'Camera height', 'number', pos.y ?? 1.6, value => {
+                cameraRig?.setAttribute('position', `${pos.x || 0} ${value} ${pos.z || 5}`);
+            }, 'step="0.1"');
+            addCheckbox(body, 'Enable WASD movement', camera?.hasAttribute('wasd-controls') !== false, value => {
+                if (value) camera?.setAttribute('wasd-controls', '');
+                else camera?.removeAttribute('wasd-controls');
+            });
+        });
+
+        addSection('light', 'Light', body => {
+            addCheckbox(body, 'Ambient light', ambient ? ambient.getAttribute('visible') !== false : true, value => {
+                ambient?.setAttribute('visible', value);
+            });
+            addInput(body, 'Ambient colour', 'color', ambient?.getAttribute('color') || '#ffffff', value => {
+                ambient?.setAttribute('color', value);
+            });
+            addInput(body, 'Ambient intensity', 'number', Number(ambient?.getAttribute('intensity') ?? 1), value => {
+                ambient?.setAttribute('intensity', value);
+            }, 'min="0" max="3" step="0.1"');
+            const directional = scene?.querySelector('a-light[type="directional"]');
+            addInput(body, 'Directional intensity', 'number', Number(directional?.getAttribute('intensity') ?? 1), value => {
+                directional?.setAttribute('intensity', value);
+            }, 'min="0" max="3" step="0.1"');
+        });
+
+        addSection('simulation', 'Simulation', body => {
+            addCheckbox(body, 'Pointer drag enabled', true, value => {
+                scene?.querySelectorAll('[studio-drag]').forEach(el => el.setAttribute('studio-drag', 'enabled', value));
+            });
+            addCheckbox(body, 'Show clickable hint', localStorage.getItem('pixelAFrame-click-hint') !== 'false', value => {
+                localStorage.setItem('pixelAFrame-click-hint', value ? 'true' : 'false');
+            });
+        });
+
+        addSection('effects', 'Effects', body => {
+            addSelect(body, 'Environment preset', ['default', 'forest', 'tron', 'starry', 'contact', 'egypt', 'checkerboard', 'osiris', 'dream', 'volcano', 'arches', 'japan'], environment.preset || 'default', value => {
+                globals?.set('environment', { ...environment, preset: value });
+            });
+            addSelect(body, 'Sky type', ['atmosphere', 'gradient', 'none'], environment.skyType || 'atmosphere', value => {
+                globals?.set('environment', { ...environment, skyType: value });
+            });
+            addSelect(body, 'Lighting', ['distant', 'point', 'none'], environment.lighting || 'distant', value => {
+                globals?.set('environment', { ...environment, lighting: value });
+            });
+        });
+
+        addSection('fog', 'Fog', body => {
+            fogEnabled = document.createElement('input');
+            fogEnabled.type = 'checkbox';
+            fogEnabled.checked = scene?.hasAttribute('fog') || false;
+            const toggleGroup = document.createElement('div');
+            toggleGroup.className = 'property-group';
+            toggleGroup.innerHTML = '<label class="property-label"><input type="checkbox"> Enable Fog</label>';
+            toggleGroup.querySelector('input').checked = fogEnabled.checked;
+            fogEnabled = toggleGroup.querySelector('input');
+            body.appendChild(toggleGroup);
+
+            const colorGroup = addInput(body, 'Fog colour', 'color', typeof fog.color === 'object' && fog.color.getHexString ? '#' + fog.color.getHexString() : (fog.color || '#1a1a2e'), () => applyFog());
+            fogColor = colorGroup;
+            addCheckbox(body, 'Match fog to background', localStorage.getItem('pixelAFrame-fog-match') === 'true', value => {
+                localStorage.setItem('pixelAFrame-fog-match', value ? 'true' : 'false');
+                if (value && background.color) { fogColor.value = background.color; applyFog(); }
+            });
+            fogType = addSelect(body, 'Fog type', ['linear', 'exponential'], fog.type || 'linear', () => applyFog());
+            fogNear = addInput(body, 'Fog near', 'number', Number(fog.near ?? 30), () => applyFog(), 'step="1"');
+            fogFar = addInput(body, 'Fog far', 'number', Number(fog.far ?? 100), () => applyFog(), 'step="1"');
+            fogDensity = addInput(body, 'Fog density', 'number', Number(fog.density ?? 0.028), () => applyFog(), 'min="0" max="1" step="0.001"');
+            fogEnabled.addEventListener('change', applyFog);
+        });
+
+        addSection('sky', 'Sky', body => {
+            const skyColor = skyEl ? (typeof skyEl.getAttribute('color') === 'object' ? '#' + skyEl.getAttribute('color').getHexString() : skyEl.getAttribute('color')) : '#1a1a2e';
+            addInput(body, 'Sky colour', 'color', skyColor || '#1a1a2e', value => {
+                let sky = scene?.querySelector('a-sky');
+                if (!sky) sky = this.app.aframeManager?.addEntity('a-sky', { color: value });
+                sky?.setAttribute('color', value);
+            });
+            addInput(body, 'Sky image URL', 'text', skyEl?.getAttribute('src') || '', value => {
+                let sky = scene?.querySelector('a-sky');
+                if (!sky) sky = this.app.aframeManager?.addEntity('a-sky', {});
+                if (value) sky?.setAttribute('src', value);
+                else sky?.removeAttribute('src');
+            }, 'placeholder="https://..."');
+        });
+
+        addSection('shadows', 'Ambient Shadows', body => {
+            addCheckbox(body, 'Enable shadows', shadowEnabled, value => {
+                globals?.setShadows(value);
+            });
+            addSelect(body, 'Shadow quality', ['basic', 'pcf', 'pcfsoft'], scene?.getAttribute('shadow')?.type || 'pcfsoft', value => {
+                globals?.setShadows(true, value);
+            });
+        });
+
+        addSection('color', 'Colour', body => {
+            addInput(body, 'Background colour', 'color', typeof background.color === 'string' ? background.color : '#1a1a2e', value => {
+                globals?.set('background', { ...background, color: value });
+            });
+            addInput(body, 'Gradient top', 'color', localStorage.getItem('pixelAFrame-gradient-top') || '#1a1a2e', value => {
+                localStorage.setItem('pixelAFrame-gradient-top', value);
+            });
+            addInput(body, 'Gradient bottom', 'color', localStorage.getItem('pixelAFrame-gradient-bottom') || '#0b1220', value => {
+                localStorage.setItem('pixelAFrame-gradient-bottom', value);
+            });
+        });
+
+        const expandBtn = document.getElementById('scene-expand-all');
+        const collapseBtn = document.getElementById('scene-collapse-all');
+        if (expandBtn) expandBtn.onclick = () => {
+            this._sceneCollapsedSections.clear();
+            container.querySelectorAll('.collapsible-content').forEach(el => el.style.display = 'block');
+            container.querySelectorAll('.collapsible-header').forEach(el => el.classList.remove('collapsed'));
+        };
+        if (collapseBtn) collapseBtn.onclick = () => {
+            container.querySelectorAll('.collapsible-content').forEach(el => el.style.display = 'none');
+            container.querySelectorAll('.collapsible-header').forEach(el => {
+                el.classList.add('collapsed');
+                this._sceneCollapsedSections.add(el.querySelector('span').textContent.toLowerCase());
+            });
+        };
+    }
+
     initSceneExport() {
         // Initialize export button
         const exportBtn = document.getElementById('btn-export-png');
@@ -2957,6 +3372,11 @@ export class UI {
             this.unifiedSettingsInitialized = true;
         }
 
+        // Load current values before showing the modal.
+        this.loadSettingsToUI();
+        this.loadSceneSettingsToUI();
+        this.updateSettingsRangeLabels();
+
         // Switch to the requested tab
         this.switchSettingsTab(initialTab);
 
@@ -2982,6 +3402,7 @@ export class UI {
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
                 this.resetSettings();
+                this.resetSceneSettings();
             });
         }
 
@@ -2990,9 +3411,25 @@ export class UI {
         if (saveBtn) {
             saveBtn.addEventListener('click', () => {
                 this.saveSettings();
+                this.applySceneSettings();
                 this.closeUnifiedSettingsModal();
             });
         }
+
+        // Keep slider value labels in sync.
+        [
+            ['setting-camera-speed', 'camera-speed-value'],
+            ['setting-autosave-interval', 'autosave-interval-value'],
+            ['setting-fog-near', 'fog-near-value'],
+            ['setting-fog-far', 'fog-far-value'],
+            ['setting-ambient-intensity', 'ambient-intensity-value']
+        ].forEach(([inputId, labelId]) => {
+            const input = document.getElementById(inputId);
+            const label = document.getElementById(labelId);
+            if (input && label) {
+                input.addEventListener('input', () => { label.textContent = input.value; });
+            }
+        });
 
         // Tab buttons
         document.querySelectorAll('.settings-tab').forEach(tab => {
