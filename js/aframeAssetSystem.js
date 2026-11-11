@@ -52,6 +52,7 @@ export class AFrameAssetSystem {
     constructor(app) {
         this.app = app;
         this.assets = this.loadStoredAssets();
+        this.migrateStoredAssets();
         this.seedExampleAssets();
         this.syncScene();
     }
@@ -63,6 +64,17 @@ export class AFrameAssetSystem {
         } catch (err) {
             return [];
         }
+    }
+
+    migrateStoredAssets() {
+        let changed = false;
+        this.assets.forEach(asset => {
+            if (asset.name === 'Blast VFX Reference' && /w3schools\.com/i.test(asset.src || '')) {
+                asset.src = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+                changed = true;
+            }
+        });
+        if (changed) this.saveStoredAssets();
     }
 
     saveStoredAssets() {
@@ -85,7 +97,7 @@ export class AFrameAssetSystem {
             { name: 'Wood Plank', type: 'image', src: svgTexture('Wood Plank', '#9c6434', '<g stroke="#70441f" stroke-width="4"><path d="M0 52 H256 M0 104 H256 M0 156 H256 M0 208 H256"/></g><g stroke="#b97a43" stroke-width="2"><path d="M20 18 C70 8 110 30 160 18 S230 26 256 16"/><path d="M0 80 C50 68 100 92 150 78 S220 88 256 76"/><path d="M0 140 C60 126 110 150 170 136 S230 146 256 132"/></g>') },
             { name: 'UV Checker Reference', type: 'image', src: svgTexture('UV Checker', '#202020', '<g fill="#ff4fc3"><rect x="0" y="0" width="32" height="32"/><rect x="64" y="0" width="32" height="32"/><rect x="128" y="0" width="32" height="32"/><rect x="192" y="0" width="32" height="32"/><rect x="32" y="32" width="32" height="32"/><rect x="96" y="32" width="32" height="32"/><rect x="160" y="32" width="32" height="32"/><rect x="224" y="32" width="32" height="32"/><rect x="0" y="64" width="32" height="32"/><rect x="64" y="64" width="32" height="32"/><rect x="128" y="64" width="32" height="32"/><rect x="192" y="64" width="32" height="32"/></g>') },
             { name: 'Explosion VFX Reference', type: 'video', src: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4' },
-            { name: 'Blast VFX Reference', type: 'video', src: 'https://www.w3schools.com/html/mov_bbb.mp4' },
+            { name: 'Blast VFX Reference', type: 'video', src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4' },
             { name: 'UI Blip', type: 'audio', src: wavDataUrl(0.14, t => Math.sin(2 * Math.PI * 660 * t) * Math.exp(-t * 28) * 0.5) },
             { name: 'UI Error', type: 'audio', src: wavDataUrl(0.25, t => (Math.sin(2 * Math.PI * 180 * t) > 0 ? 0.35 : -0.35) * Math.exp(-t * 10)) },
             { name: 'Success Applause', type: 'audio', src: wavDataUrl(1.2, t => (Math.random() * 2 - 1) * Math.exp(-t * 2.2) * 0.35) },
