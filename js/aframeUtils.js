@@ -167,7 +167,7 @@ export const COMPONENT_LIBRARY = {
         label: 'Visibility',
         category: 'Core',
         properties: {
-            visible: { type: 'boolean', default: true }
+            value: { type: 'boolean', default: true }
         }
     },
     'studio-behavior': {

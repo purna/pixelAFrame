@@ -200,6 +200,7 @@ export class MaterialsManager {
 
             dialog.remove();
             this.render();
+            this.app.ui.renderAssetsSection?.();
             this.app.ui.showNotification('Material created successfully!', 'success');
         });
     }
@@ -369,6 +370,7 @@ export class MaterialsManager {
 
             dialog.remove();
             this.render();
+            this.app.ui.renderAssetsSection?.();
             this.app.ui.showNotification('Material updated successfully!', 'success');
         });
     }
@@ -386,6 +388,7 @@ export class MaterialsManager {
                 this.selectedMaterial = null;
             }
             this.render();
+            this.app.ui.renderAssetsSection?.();
         }
     }
 

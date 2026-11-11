@@ -21,6 +21,7 @@ import { AFrameComponentSystem } from './aframeComponentSystem.js';
 import { AFrameMixinSystem } from './aframeMixinSystem.js';
 import { AFrameGlobalsSystem } from './aframeGlobalsSystem.js';
 import { AFrameAssetSystem } from './aframeAssetSystem.js';
+import { AFrameBehaviorSystem } from './aframeBehaviorSystem.js';
 import './notifications.js';
 
 
@@ -67,6 +68,7 @@ class StageApp {
         this.mixinSystem = new AFrameMixinSystem(this);
         this.globalsSystem = new AFrameGlobalsSystem(this);
         this.assetSystem = new AFrameAssetSystem(this);
+        this.behaviorSystem = new AFrameBehaviorSystem(this);
 
         this.init();
     }

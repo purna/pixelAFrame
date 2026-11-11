@@ -142,6 +142,32 @@ export const AFrameFeatureScript = `
                 case 'swap-image':
                     if (target && value) target.setAttribute('material', 'src', value);
                     break;
+                case 'set-color':
+                    if (target && value) target.setAttribute('material', 'color', value);
+                    break;
+                case 'set-visible':
+                    if (target) target.setAttribute('visible', value === true || value === 'true');
+                    break;
+                case 'teleport-camera': {
+                    var cameraRig = el.sceneEl && (el.sceneEl.querySelector('#camera-rig') || el.sceneEl.querySelector('a-camera'));
+                    if (cameraRig) {
+                        var worldPos = new THREE.Vector3();
+                        el.object3D.getWorldPosition(worldPos);
+                        cameraRig.setAttribute('position', worldPos.x + ' ' + (worldPos.y + 1.6) + ' ' + worldPos.z);
+                    }
+                    break;
+                }
+                case 'vibrate': {
+                    var duration = Number(action.duration || 120);
+                    var intensity = Number(action.intensity ?? 0.6);
+                    if (navigator.vibrate) navigator.vibrate(duration);
+                    var controllers = el.sceneEl ? el.sceneEl.querySelectorAll('[tracked-controls], [laser-controls], [hand-controls]') : [];
+                    controllers.forEach(function (controller) {
+                        var actuators = controller.components && controller.components['tracked-controls'] && controller.components['tracked-controls'].controller && controller.components['tracked-controls'].controller.hapticActuators;
+                        if (actuators && actuators[0] && actuators[0].pulse) actuators[0].pulse(intensity, duration);
+                    });
+                    break;
+                }
                 case 'start-animation':
                     (target || el).emit('start-anim');
                     break;
@@ -245,6 +271,164 @@ export const AFrameFeatureScript = `
             }
 
             this.points.geometry.attributes.position.needsUpdate = true;
+        }
+    });
+    AFRAME.registerComponent('studio-drag', {
+        schema: {
+            enabled: { type: 'boolean', default: true }
+        },
+
+        init: function () {
+            this.dragging = false;
+            this.lastX = 0;
+            this.lastY = 0;
+            this.onDown = this.onDown.bind(this);
+            this.onMove = this.onMove.bind(this);
+            this.onUp = this.onUp.bind(this);
+            this.el.addEventListener('pointerdown', this.onDown);
+            this.el.addEventListener('mousedown', this.onDown);
+            var canvas = this.el.sceneEl && this.el.sceneEl.canvas;
+            if (canvas) {
+                canvas.addEventListener('pointermove', this.onMove);
+                canvas.addEventListener('pointerup', this.onUp);
+                canvas.addEventListener('pointerleave', this.onUp);
+            }
+        },
+
+        remove: function () {
+            this.el.removeEventListener('pointerdown', this.onDown);
+            this.el.removeEventListener('mousedown', this.onDown);
+            var canvas = this.el.sceneEl && this.el.sceneEl.canvas;
+            if (canvas) {
+                canvas.removeEventListener('pointermove', this.onMove);
+                canvas.removeEventListener('pointerup', this.onUp);
+                canvas.removeEventListener('pointerleave', this.onUp);
+            }
+        },
+
+        onDown: function (evt) {
+            if (!this.data.enabled) return;
+            this.dragging = true;
+            this.lastX = evt.clientX;
+            this.lastY = evt.clientY;
+            if (this.el.sceneEl && this.el.sceneEl.canvas) this.el.sceneEl.canvas.style.cursor = 'grabbing';
+        },
+
+        onMove: function (evt) {
+            if (!this.dragging || !this.data.enabled) return;
+            var dx = evt.clientX - this.lastX;
+            var dy = evt.clientY - this.lastY;
+            this.lastX = evt.clientX;
+            this.lastY = evt.clientY;
+
+            var camera = this.el.sceneEl && this.el.sceneEl.camera;
+            if (!camera) return;
+            var right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+            var up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+            var distance = camera.position.distanceTo(this.el.object3D.position);
+            var scale = Math.max(0.002, distance * 0.0015);
+            this.el.object3D.position.addScaledVector(right, dx * scale);
+            this.el.object3D.position.addScaledVector(up, -dy * scale);
+        },
+
+        onUp: function () {
+            this.dragging = false;
+            if (this.el.sceneEl && this.el.sceneEl.canvas) this.el.sceneEl.canvas.style.cursor = '';
+        }
+    });
+
+    AFRAME.registerComponent('studio-open-close', {
+        schema: {
+            angle: { type: 'number', default: 90 },
+            duration: { type: 'number', default: 900 },
+            axis: { type: 'string', default: 'y' }
+        },
+
+        init: function () {
+            this.open = false;
+            this.rotation = this.el.getAttribute('rotation') || { x: 0, y: 0, z: 0 };
+            this.bound = this.toggle.bind(this);
+            this.el.addEventListener('click', this.bound);
+        },
+
+        remove: function () {
+            this.el.removeEventListener('click', this.bound);
+        },
+
+        toggle: function () {
+            this.open = !this.open;
+            var axis = this.data.axis || 'y';
+            var base = Number(this.rotation[axis] || 0);
+            var target = base + (this.open ? Number(this.data.angle) : 0);
+            var to = { x: Number(this.rotation.x || 0), y: Number(this.rotation.y || 0), z: Number(this.rotation.z || 0) };
+            to[axis] = target;
+            this.el.setAttribute('animation__studio_open', {
+                property: 'rotation',
+                to: to.x + ' ' + to.y + ' ' + to.z,
+                dur: Number(this.data.duration) || 900,
+                easing: 'easeInOutQuad'
+            });
+        }
+    });
+
+    AFRAME.registerComponent('studio-counter', {
+        schema: {
+            target: { type: 'int', default: 5 },
+            rewardEvent: { type: 'string', default: 'counter-complete' },
+            message: { type: 'string', default: 'Well done!' }
+        },
+
+        init: function () {
+            this.count = 0;
+            this.bound = this.increment.bind(this);
+            this.el.addEventListener('click', this.bound);
+        },
+
+        remove: function () {
+            this.el.removeEventListener('click', this.bound);
+        },
+
+        increment: function () {
+            this.count++;
+            this.el.emit('counter-changed', { count: this.count, target: this.data.target });
+            if (this.count >= Number(this.data.target)) {
+                this.el.emit(this.data.rewardEvent || 'counter-complete', { count: this.count });
+                if (this.data.message) {
+                    var textEl = this.el.sceneEl && this.el.sceneEl.querySelector('#reward-text');
+                    if (textEl) textEl.setAttribute('text', 'value', this.data.message);
+                }
+            }
+        }
+    });
+
+    AFRAME.registerComponent('studio-condition', {
+        schema: {
+            event: { type: 'string', default: 'correct' },
+            target: { type: 'selector', default: null },
+            action: { type: 'string', default: 'show' }
+        },
+
+        init: function () {
+            this.bound = this.run.bind(this);
+            this.el.addEventListener(this.data.event, this.bound);
+        },
+
+        update: function (oldData) {
+            if (oldData.event && oldData.event !== this.data.event) {
+                this.el.removeEventListener(oldData.event, this.bound);
+                this.el.addEventListener(this.data.event, this.bound);
+            }
+        },
+
+        remove: function () {
+            this.el.removeEventListener(this.data.event, this.bound);
+        },
+
+        run: function () {
+            var target = this.data.target;
+            if (!target) return;
+            if (this.data.action === 'hide') target.setAttribute('visible', false);
+            else target.setAttribute('visible', true);
         }
     });
 })();

@@ -174,7 +174,7 @@ class TutorialSystem {
         if (taskElement) {
             if (step.task) {
                 taskElement.style.display = 'block';
-                taskElement.innerHTML = `<i class="fas fa-circle-notch"></i> ${step.taskLabel || 'Complete this step to continue'}`;
+                taskElement.innerHTML = `<i class="fas fa-circle-notch"></i> ${this.escapeText(step.taskLabel || 'Complete this step to continue')}`;
             } else {
                 taskElement.style.display = 'none';
                 taskElement.innerHTML = '';
@@ -202,6 +202,13 @@ class TutorialSystem {
         this.addDirectionalArrow(step.arrowPosition || step.position, step.arrowPositionOverride);
     }
 
+    escapeText(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
     updateTaskState() {
         const step = this.currentTutorialStep;
         if (!step) return;
@@ -213,10 +220,10 @@ class TutorialSystem {
         if (taskElement) {
             if (done) {
                 taskElement.classList.add('complete');
-                taskElement.innerHTML = `<i class="fas fa-check-circle"></i> ${step.taskLabel || 'Step complete'}`;
+                taskElement.innerHTML = `<i class="fas fa-check-circle"></i> ${this.escapeText(step.taskLabel || 'Step complete')}`;
             } else {
                 taskElement.classList.remove('complete');
-                taskElement.innerHTML = `<i class="fas fa-circle-notch"></i> ${step.taskLabel || 'Complete this step to continue'}`;
+                taskElement.innerHTML = `<i class="fas fa-circle-notch"></i> ${this.escapeText(step.taskLabel || 'Complete this step to continue')}`;
             }
         }
 

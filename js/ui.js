@@ -1,3 +1,5 @@
+import { getEntityDoc, getComponentDoc, formatExampleHTML } from './aframeDocs.js';
+
 export class UI {
     constructor(app) {
         this.app = app;
@@ -627,135 +629,267 @@ export class UI {
             return;
         }
 
+        this.assetTab = this.assetTab || 'images';
+        this.assetSearch = this.assetSearch || '';
+
         container.innerHTML = '';
 
-        // Add asset form
-        const form = document.createElement('div');
-        form.className = 'property-group';
-        form.innerHTML = `
-            <div class="property-label">Add Asset</div>
-            <div class="input-group"><span>Name</span><input type="text" class="asset-name" placeholder="My panorama"></div>
-            <div class="input-group"><span>Type</span>
-                <select class="component-select asset-type">
-                    <option value="image">Image</option>
-                    <option value="panorama">360 Panorama</option>
-                    <option value="video">Video</option>
-                    <option value="audio">Audio</option>
-                    <option value="model">3D Model</option>
-                </select>
-            </div>
-            <div class="input-group"><span>URL</span><input type="text" class="asset-url" placeholder="https://..."></div>
-            <input type="file" class="asset-file" style="display:none">
-            <button class="btn asset-file-btn" style="width:100%; margin-top:5px;"><i class="fas fa-folder-open"></i> Choose File</button>
-            <button class="btn primary asset-add-btn" style="width:100%; margin-top:5px;"><i class="fas fa-plus"></i> Add Asset</button>
-        `;
+        const tabs = [
+            { id: 'images', label: 'Images', icon: 'fa-image', types: ['image', 'panorama'] },
+            { id: 'media', label: 'Media', icon: 'fa-video', types: ['video'] },
+            { id: 'audio', label: 'Audio', icon: 'fa-volume-up', types: ['audio'] },
+            { id: 'models', label: 'Models', icon: 'fa-cubes', types: ['model'] },
+            { id: 'materials', label: 'Materials', icon: 'fa-palette', types: [] }
+        ];
 
-        const fileInput = form.querySelector('.asset-file');
-        form.querySelector('.asset-file-btn').addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', () => {
-            const file = fileInput.files && fileInput.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-                form.querySelector('.asset-url').value = reader.result;
-                if (!form.querySelector('.asset-name').value) {
-                    form.querySelector('.asset-name').value = file.name;
-                }
-            };
-            reader.readAsDataURL(file);
-        });
-
-        form.querySelector('.asset-add-btn').addEventListener('click', () => {
-            const src = form.querySelector('.asset-url').value.trim();
-            const name = form.querySelector('.asset-name').value.trim();
-            const type = form.querySelector('.asset-type').value;
-            if (!src) {
-                this.showNotification('Enter an asset URL or choose a file first.', 'error');
-                return;
-            }
-            assetSystem.addAsset({ name, type, src });
-            this.renderAssetsSection();
-            this.showNotification(`Asset "${name || type}" added`, 'success');
-        });
-
-        container.appendChild(form);
-
-        const assets = assetSystem.getAssets();
-        if (assets.length === 0) {
-            const empty = document.createElement('div');
-            empty.className = 'empty-state';
-            empty.innerHTML = '<p>No assets yet.</p><p>Add an image, panorama, video, audio file or model.</p>';
-            container.appendChild(empty);
-            return;
-        }
-
-        const listHeader = document.createElement('div');
-        listHeader.className = 'property-label';
-        listHeader.textContent = `Assets (${assets.length})`;
-        listHeader.style.marginTop = '10px';
-        container.appendChild(listHeader);
-
-        assets.forEach(asset => {
-            const row = document.createElement('div');
-            row.className = 'material-item';
-            row.style.alignItems = 'center';
-
-            const preview = document.createElement('div');
-            preview.className = 'material-preview';
-            if (asset.type === 'image' || asset.type === 'panorama') {
-                preview.style.backgroundImage = `url("${asset.src}")`;
-                preview.style.backgroundSize = 'cover';
-                preview.style.backgroundPosition = 'center';
-            } else {
-                const icons = { video: 'fa-video', audio: 'fa-volume-up', model: 'fa-cubes' };
-                preview.innerHTML = `<i class="fas ${icons[asset.type] || 'fa-file'}" style="display:flex;align-items:center;justify-content:center;height:100%;"></i>`;
-            }
-            preview.title = asset.name;
-
-            const info = document.createElement('div');
-            info.className = 'material-info';
-            info.innerHTML = `<div style="font-size:0.75rem; color:var(--text-primary); font-weight:bold;">${asset.name}</div><div style="font-size:0.65rem; color:var(--text-secondary);">${asset.type} · #${asset.id}</div>`;
-
-            const actions = document.createElement('div');
-            actions.className = 'material-actions';
-
-            const placeBtn = document.createElement('button');
-            placeBtn.className = 'btn icon-only';
-            placeBtn.title = 'Place in scene';
-            placeBtn.innerHTML = '<i class="fas fa-plus"></i>';
-            placeBtn.addEventListener('click', () => {
-                assetSystem.addAssetToScene(asset.id);
-            });
-
-            const applyBtn = document.createElement('button');
-            applyBtn.className = 'btn icon-only';
-            applyBtn.title = 'Use on selected element';
-            applyBtn.innerHTML = '<i class="fas fa-check"></i>';
-            applyBtn.addEventListener('click', () => {
-                if (!assetSystem.applyAssetToSelected(asset.id)) {
-                    this.showNotification('Select an A-Frame element first.', 'info');
-                }
-            });
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'btn icon-only';
-            deleteBtn.title = 'Delete asset';
-            deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
-            deleteBtn.addEventListener('click', () => {
-                if (!window.confirm(`Delete asset "${asset.name}"?`)) return;
-                assetSystem.removeAsset(asset.id);
+        const tabBar = document.createElement('div');
+        tabBar.className = 'assets-tabs';
+        tabs.forEach(tab => {
+            const button = document.createElement('button');
+            button.className = 'asset-tab' + (this.assetTab === tab.id ? ' active' : '');
+            button.dataset.assetTab = tab.id;
+            button.innerHTML = `<i class="fas ${tab.icon}"></i> ${tab.label}`;
+            button.addEventListener('click', () => {
+                this.assetTab = tab.id;
                 this.renderAssetsSection();
             });
-
-            actions.appendChild(placeBtn);
-            actions.appendChild(applyBtn);
-            actions.appendChild(deleteBtn);
-
-            row.appendChild(preview);
-            row.appendChild(info);
-            row.appendChild(actions);
-            container.appendChild(row);
+            tabBar.appendChild(button);
         });
+        container.appendChild(tabBar);
+
+        const searchWrap = document.createElement('div');
+        searchWrap.className = 'asset-search';
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.placeholder = 'Search assets...';
+        searchInput.value = this.assetSearch;
+        searchWrap.appendChild(searchInput);
+        container.appendChild(searchWrap);
+
+        let renderList = () => {};
+
+        if (this.assetTab !== 'materials') {
+            const currentTab = tabs.find(tab => tab.id === this.assetTab) || tabs[0];
+
+            // Add asset form
+            const form = document.createElement('div');
+            form.className = 'property-group asset-add-form';
+            const typeOptions = this.assetTab === 'images'
+                ? '<option value="image">Image</option><option value="panorama">360 Panorama</option>'
+                : this.assetTab === 'media'
+                    ? '<option value="video">Video</option>'
+                    : this.assetTab === 'audio'
+                        ? '<option value="audio">Audio</option>'
+                        : '<option value="model">3D Model (.glb / .gltf)</option>';
+
+            form.innerHTML = `
+                <div class="property-label">Add ${currentTab.label}</div>
+                <div class="input-group"><span>Name</span><input type="text" class="asset-name" placeholder="My asset"></div>
+                <div class="input-group"><span>Type</span><select class="component-select asset-type">${typeOptions}</select></div>
+                <div class="input-group"><span>URL</span><input type="text" class="asset-url" placeholder="https://..."></div>
+                <input type="file" class="asset-file" style="display:none">
+                <button class="btn asset-file-btn" style="width:100%; margin-top:5px;"><i class="fas fa-folder-open"></i> Choose File</button>
+                <button class="btn primary asset-add-btn" style="width:100%; margin-top:5px;"><i class="fas fa-plus"></i> Add Asset</button>
+            `;
+
+            const fileInput = form.querySelector('.asset-file');
+            fileInput.accept = this.assetTab === 'audio' ? 'audio/*'
+                : this.assetTab === 'media' ? 'video/*'
+                : this.assetTab === 'models' ? '.glb,.gltf'
+                : 'image/*';
+            form.querySelector('.asset-file-btn').addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', () => {
+                const file = fileInput.files && fileInput.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    form.querySelector('.asset-url').value = reader.result;
+                    if (!form.querySelector('.asset-name').value) {
+                        form.querySelector('.asset-name').value = file.name;
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+
+            form.querySelector('.asset-add-btn').addEventListener('click', () => {
+                const src = form.querySelector('.asset-url').value.trim();
+                const name = form.querySelector('.asset-name').value.trim();
+                const type = form.querySelector('.asset-type').value;
+                if (!src) {
+                    this.showNotification('Enter an asset URL or choose a file first.', 'error');
+                    return;
+                }
+                assetSystem.addAsset({ name, type, src });
+                this.renderAssetsSection();
+                this.showNotification(`Asset "${name || type}" added`, 'success');
+            });
+
+            container.appendChild(form);
+
+            const listContainer = document.createElement('div');
+            listContainer.className = 'assets-list';
+            container.appendChild(listContainer);
+
+            renderList = () => {
+                listContainer.innerHTML = '';
+                const query = this.assetSearch.toLowerCase();
+                const assets = assetSystem.getAssets().filter(asset => {
+                    if (!currentTab.types.includes(asset.type)) return false;
+                    if (!query) return true;
+                    return `${asset.name} ${asset.type} ${asset.id}`.toLowerCase().includes(query);
+                });
+
+                if (assets.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'empty-state';
+                    empty.innerHTML = `<p>No ${currentTab.label.toLowerCase()} assets yet.</p><p>Add a URL or choose a file above.</p>`;
+                    listContainer.appendChild(empty);
+                    return;
+                }
+
+                assets.forEach(asset => {
+                    const row = document.createElement('div');
+                    row.className = 'material-item';
+                    row.style.alignItems = 'center';
+
+                    const preview = document.createElement('div');
+                    preview.className = 'material-preview';
+                    if (asset.type === 'image' || asset.type === 'panorama') {
+                        preview.style.backgroundImage = `url("${asset.src}")`;
+                        preview.style.backgroundSize = 'cover';
+                        preview.style.backgroundPosition = 'center';
+                    } else {
+                        const icons = { video: 'fa-video', audio: 'fa-volume-up', model: 'fa-cubes' };
+                        preview.innerHTML = `<i class="fas ${icons[asset.type] || 'fa-file'}" style="display:flex;align-items:center;justify-content:center;height:100%;"></i>`;
+                    }
+                    preview.title = asset.name;
+
+                    const info = document.createElement('div');
+                    info.className = 'material-info';
+                    info.innerHTML = `<div style="font-size:0.75rem; color:var(--text-primary); font-weight:bold;">${asset.name}</div><div style="font-size:0.65rem; color:var(--text-secondary);">${asset.type} · #${asset.id}</div>`;
+
+                    const actions = document.createElement('div');
+                    actions.className = 'material-actions';
+
+                    const placeBtn = document.createElement('button');
+                    placeBtn.className = 'btn icon-only';
+                    placeBtn.title = 'Place in scene';
+                    placeBtn.innerHTML = '<i class="fas fa-plus"></i>';
+                    placeBtn.addEventListener('click', () => assetSystem.addAssetToScene(asset.id));
+
+                    const applyBtn = document.createElement('button');
+                    applyBtn.className = 'btn icon-only';
+                    applyBtn.title = 'Use on selected element';
+                    applyBtn.innerHTML = '<i class="fas fa-check"></i>';
+                    applyBtn.addEventListener('click', () => {
+                        if (!assetSystem.applyAssetToSelected(asset.id)) {
+                            this.showNotification('Select an A-Frame element first.', 'info');
+                        }
+                    });
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btn icon-only';
+                    deleteBtn.title = 'Delete asset';
+                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                    deleteBtn.addEventListener('click', () => {
+                        if (!window.confirm(`Delete asset "${asset.name}"?`)) return;
+                        assetSystem.removeAsset(asset.id);
+                        this.renderAssetsSection();
+                    });
+
+                    actions.appendChild(placeBtn);
+                    actions.appendChild(applyBtn);
+                    actions.appendChild(deleteBtn);
+
+                    row.appendChild(preview);
+                    row.appendChild(info);
+                    row.appendChild(actions);
+                    listContainer.appendChild(row);
+                });
+            };
+        } else {
+            // Materials are managed by the existing MaterialsManager but exposed
+            // here beside media assets, matching the Pixel 3D asset library.
+            const materialsManager = this.app.materialsManager;
+            const form = document.createElement('div');
+            form.className = 'property-group asset-add-form';
+            form.innerHTML = `
+                <div class="property-label">Materials</div>
+                <button class="btn primary" style="width:100%;"><i class="fas fa-plus"></i> Create Material</button>
+            `;
+            form.querySelector('button').addEventListener('click', () => {
+                if (materialsManager) materialsManager.createNewMaterial();
+            });
+            container.appendChild(form);
+
+            const listContainer = document.createElement('div');
+            listContainer.className = 'assets-list';
+            container.appendChild(listContainer);
+
+            renderList = () => {
+                listContainer.innerHTML = '';
+                const query = this.assetSearch.toLowerCase();
+                const materials = (materialsManager?.materials || []).filter(material => {
+                    if (!query) return true;
+                    return `${material.name} ${material.id}`.toLowerCase().includes(query);
+                });
+
+                if (materials.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'empty-state';
+                    empty.textContent = 'No materials yet. Create one to reuse it across elements.';
+                    listContainer.appendChild(empty);
+                    return;
+                }
+
+                materials.forEach(material => {
+                    const row = document.createElement('div');
+                    row.className = 'material-item';
+                    row.style.alignItems = 'center';
+
+                    const preview = document.createElement('div');
+                    preview.className = 'material-preview';
+                    preview.style.backgroundColor = '#' + material.color.toString(16).padStart(6, '0');
+
+                    const info = document.createElement('div');
+                    info.className = 'material-info';
+                    info.innerHTML = `<div style="font-size:0.75rem; color:var(--text-primary); font-weight:bold;">${material.name}</div><div style="font-size:0.65rem; color:var(--text-secondary);">M: ${material.metalness.toFixed(2)} · R: ${material.roughness.toFixed(2)}</div>`;
+
+                    const actions = document.createElement('div');
+                    actions.className = 'material-actions';
+
+                    const applyBtn = document.createElement('button');
+                    applyBtn.className = 'btn icon-only';
+                    applyBtn.title = 'Apply to selected element';
+                    applyBtn.innerHTML = '<i class="fas fa-check"></i>';
+                    applyBtn.addEventListener('click', () => {
+                        materialsManager?.applyMaterialToSelected(material);
+                    });
+
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'btn icon-only';
+                    editBtn.title = 'Edit material';
+                    editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+                    editBtn.addEventListener('click', () => {
+                        materialsManager?.editMaterial(material);
+                    });
+
+                    actions.appendChild(applyBtn);
+                    actions.appendChild(editBtn);
+                    row.appendChild(preview);
+                    row.appendChild(info);
+                    row.appendChild(actions);
+                    listContainer.appendChild(row);
+                });
+            };
+        }
+
+        searchInput.addEventListener('input', () => {
+            this.assetSearch = searchInput.value;
+            renderList();
+        });
+
+        renderList();
     }
 
     setupPanelTabs() {
@@ -1211,6 +1345,24 @@ export class UI {
         });
         this.propsContent.appendChild(idGroup);
 
+        // Short, student-friendly documentation for the selected element.
+        const entityDoc = getEntityDoc(entity.tagName.toLowerCase());
+        const entityDocGroup = document.createElement('details');
+        entityDocGroup.className = 'doc-block';
+        const entityDocSummary = document.createElement('summary');
+        entityDocSummary.textContent = `About <${entity.tagName.toLowerCase()}>`;
+        const entityDocText = document.createElement('p');
+        entityDocText.textContent = entityDoc.description;
+        const entityExample = document.createElement('pre');
+        entityExample.className = 'doc-example';
+        const entityExampleCode = document.createElement('code');
+        entityExampleCode.textContent = formatExampleHTML(entityDoc.example);
+        entityExample.appendChild(entityExampleCode);
+        entityDocGroup.appendChild(entityDocSummary);
+        entityDocGroup.appendChild(entityDocText);
+        entityDocGroup.appendChild(entityExample);
+        this.propsContent.appendChild(entityDocGroup);
+
         const addVec3 = (label, attribute, fallback) => {
             const vec = parseVec(entity.getAttribute(attribute), fallback);
             const group = document.createElement('div');
@@ -1382,21 +1534,28 @@ export class UI {
             this.propsContent.appendChild(particleGroup);
         }
 
+        // Curated, Dreamweaver-style behaviours
+        this.renderAFrameBehaviorSection(entity);
+
         // Component and mixin authoring systems
         this.renderAFrameComponentSection(entity);
         this.renderAFrameMixinSection(entity);
 
-        // Dreamweaver-style behaviours / triggers
+        // Advanced custom actions
         const behaviorAttr = entity.getAttribute('studio-behavior');
-        let behaviors = [];
+        let allBehaviors = [];
         if (behaviorAttr) {
             try {
-                behaviors = JSON.parse(behaviorAttr.actions || '[]');
-                if (!Array.isArray(behaviors)) behaviors = [];
+                const rawActions = typeof behaviorAttr === 'object' ? behaviorAttr.actions : behaviorAttr;
+                allBehaviors = JSON.parse(rawActions || '[]');
+                if (!Array.isArray(allBehaviors)) allBehaviors = [];
             } catch (err) {
-                behaviors = [];
+                allBehaviors = [];
             }
         }
+        // Curated behaviours own some actions internally; only show manual
+        // actions here so the advanced editor does not delete them.
+        const behaviors = allBehaviors.filter(action => !action._behaviorId);
 
         const behaviorGroup = document.createElement('div');
         behaviorGroup.className = 'property-group';
@@ -1420,8 +1579,9 @@ export class UI {
             removeBtn.innerHTML = '<i class="fas fa-times"></i>';
             removeBtn.title = 'Remove action';
             removeBtn.addEventListener('click', () => {
-                behaviors.splice(index, 1);
-                entity.setAttribute('studio-behavior', 'actions', JSON.stringify(behaviors));
+                const targetIndex = allBehaviors.indexOf(action);
+                if (targetIndex > -1) allBehaviors.splice(targetIndex, 1);
+                entity.setAttribute('studio-behavior', 'actions', JSON.stringify(allBehaviors));
                 this.renderAFramePropertiesPanel(entity);
             });
             row.appendChild(text);
@@ -1492,8 +1652,8 @@ export class UI {
             };
             if (!action.target) delete action.target;
             if (!action.value) delete action.value;
-            behaviors.push(action);
-            entity.setAttribute('studio-behavior', 'actions', JSON.stringify(behaviors));
+            allBehaviors.push(action);
+            entity.setAttribute('studio-behavior', 'actions', JSON.stringify(allBehaviors));
             this.renderAFramePropertiesPanel(entity);
         });
         behaviorGroup.appendChild(addBehaviorBtn);
@@ -1513,6 +1673,179 @@ export class UI {
         });
         actions.appendChild(deleteBtn);
         this.propsContent.appendChild(actions);
+    }
+
+    renderAFrameBehaviorSection(entity) {
+        const system = this.app.behaviorSystem;
+        if (!system) return;
+
+        const group = document.createElement('div');
+        group.className = 'property-group';
+        group.innerHTML = '<div class="property-label">Behaviours</div>';
+
+        const applied = system.getApplied(entity);
+        if (applied.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'font-size:0.72rem; color:var(--text-secondary); margin-bottom:6px;';
+            empty.textContent = 'Click-to-add behaviours: show/hide, highlight, spin, doors, sounds and more.';
+            group.appendChild(empty);
+        }
+
+        applied.forEach(record => {
+            const definition = system.getDefinition(record.type);
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; align-items:center; gap:6px; background:var(--bg-light); border:1px solid var(--border-color); border-radius:4px; padding:5px 6px; margin-bottom:4px; font-size:0.7rem;';
+
+            const text = document.createElement('span');
+            text.style.flex = '1';
+            text.innerHTML = `<i class="fas ${definition?.icon || 'fa-magic'}"></i> ${definition?.label || record.type}`;
+
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'btn icon-only';
+            removeBtn.title = 'Remove behaviour';
+            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            removeBtn.addEventListener('click', () => {
+                system.remove(entity, record.id);
+                this.renderAFramePropertiesPanel(entity);
+            });
+
+            row.appendChild(text);
+            row.appendChild(removeBtn);
+            group.appendChild(row);
+        });
+
+        // Ready-made presets for scaffolding.
+        const presets = system.getPresets();
+        const presetRow = document.createElement('div');
+        presetRow.style.cssText = 'display:flex; gap:6px; margin-top:6px;';
+        const presetSelect = document.createElement('select');
+        presetSelect.className = 'component-select';
+        presetSelect.innerHTML = '<option value="">Preset...</option>';
+        Object.entries(presets).forEach(([name, preset]) => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = preset.label;
+            option.title = preset.description;
+            presetSelect.appendChild(option);
+        });
+        const presetBtn = document.createElement('button');
+        presetBtn.className = 'btn';
+        presetBtn.innerHTML = '<i class="fas fa-magic"></i>';
+        presetBtn.title = 'Apply preset';
+        presetBtn.addEventListener('click', () => {
+            if (!presetSelect.value) return;
+            system.applyPreset(entity, presetSelect.value);
+            this.renderAFramePropertiesPanel(entity);
+        });
+        presetRow.appendChild(presetSelect);
+        presetRow.appendChild(presetBtn);
+        group.appendChild(presetRow);
+
+        // Add a single behaviour with simple parameter fields.
+        const library = system.getLibrary();
+        const behaviorSelect = document.createElement('select');
+        behaviorSelect.className = 'component-select';
+        behaviorSelect.style.marginTop = '6px';
+        behaviorSelect.innerHTML = '<option value="">Add behaviour...</option>';
+
+        const categories = {};
+        Object.entries(library).forEach(([name, definition]) => {
+            if (!categories[definition.category]) categories[definition.category] = [];
+            categories[definition.category].push({ name, definition });
+        });
+        Object.entries(categories).forEach(([category, items]) => {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = category;
+            items.forEach(({ name, definition }) => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = definition.label;
+                option.title = definition.description;
+                optgroup.appendChild(option);
+            });
+            behaviorSelect.appendChild(optgroup);
+        });
+        group.appendChild(behaviorSelect);
+
+        const paramsContainer = document.createElement('div');
+        paramsContainer.style.cssText = 'display:flex; flex-direction:column; gap:5px; margin-top:5px;';
+        group.appendChild(paramsContainer);
+
+        const collectParams = {};
+        const rebuildParams = (type) => {
+            paramsContainer.innerHTML = '';
+            Object.keys(collectParams).forEach(key => delete collectParams[key]);
+            const definition = library[type];
+            if (!definition) return;
+
+            Object.entries(definition.params || {}).forEach(([name, param]) => {
+                const row = document.createElement('div');
+                row.className = 'input-group';
+                const label = document.createElement('span');
+                label.textContent = param.label || name;
+                row.appendChild(label);
+
+                let input;
+                if (param.type === 'boolean') {
+                    input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.checked = param.default === true;
+                } else if (param.type === 'select') {
+                    input = document.createElement('select');
+                    input.className = 'component-select';
+                    (param.options || []).forEach(optionValue => {
+                        const option = document.createElement('option');
+                        option.value = optionValue;
+                        option.textContent = optionValue;
+                        input.appendChild(option);
+                    });
+                    input.value = param.default;
+                } else {
+                    input = document.createElement('input');
+                    input.type = param.type === 'number' ? 'number'
+                        : param.type === 'color' ? 'color' : 'text';
+                    if (param.type === 'number') {
+                        if (param.min !== undefined) input.min = param.min;
+                        if (param.max !== undefined) input.max = param.max;
+                        input.step = param.step || 0.1;
+                    }
+                    input.value = param.default !== undefined ? param.default : '';
+                }
+
+                const readValue = () => {
+                    if (param.type === 'boolean') return input.checked;
+                    if (param.type === 'number') return Number(input.value) || 0;
+                    return input.value;
+                };
+                collectParams[name] = { input, param, readValue };
+                input.addEventListener('input', () => {
+                    collectParams[name].value = readValue();
+                });
+                collectParams[name].value = readValue();
+                row.appendChild(input);
+                paramsContainer.appendChild(row);
+            });
+        };
+
+        behaviorSelect.addEventListener('change', () => rebuildParams(behaviorSelect.value));
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'btn primary';
+        addBtn.style.cssText = 'width:100%; margin-top:6px;';
+        addBtn.innerHTML = '<i class="fas fa-plus"></i> Add Behaviour';
+        addBtn.addEventListener('click', () => {
+            const type = behaviorSelect.value;
+            if (!type) return;
+            const params = {};
+            Object.entries(collectParams).forEach(([name, entry]) => {
+                params[name] = entry.readValue();
+            });
+            system.add(entity, type, params);
+            this.renderAFramePropertiesPanel(entity);
+        });
+        group.appendChild(addBtn);
+
+        this.propsContent.appendChild(group);
     }
 
     renderAFrameComponentSection(entity) {
@@ -1560,6 +1893,19 @@ export class UI {
 
             const body = document.createElement('div');
             body.style.cssText = 'display:flex; flex-direction:column; gap:5px; padding-top:6px;';
+
+            const componentDoc = getComponentDoc(component.name);
+            const componentDescription = document.createElement('p');
+            componentDescription.className = 'doc-description';
+            componentDescription.textContent = componentDoc.description;
+            const componentExample = document.createElement('pre');
+            componentExample.className = 'doc-example';
+            const componentExampleCode = document.createElement('code');
+            componentExampleCode.textContent = formatExampleHTML(componentDoc.example);
+            componentExample.appendChild(componentExampleCode);
+            body.appendChild(componentDescription);
+            body.appendChild(componentExample);
+
             const schema = system.getSchema(component.name);
 
             if (Object.keys(schema).length === 0) {
@@ -1581,7 +1927,19 @@ export class UI {
                     row.appendChild(labelEl);
 
                     let input;
-                    if (definition.type === 'boolean') {
+                    if (current && typeof current === 'object') {
+                        input = document.createElement('textarea');
+                        input.className = 'component-select';
+                        input.rows = 2;
+                        input.value = JSON.stringify(current);
+                        input.addEventListener('change', () => {
+                            try {
+                                system.setProperty(entity, component.name, property, JSON.parse(input.value));
+                            } catch (err) {
+                                this.showNotification('That value must be valid JSON.', 'error');
+                            }
+                        });
+                    } else if (definition.type === 'boolean') {
                         input = document.createElement('input');
                         input.type = 'checkbox';
                         input.checked = current === true || current === 'true';
@@ -1742,6 +2100,7 @@ export class UI {
 
     renderAFrameSceneSettings() {
         const scene = document.getElementById('aframe-scene');
+        const globals = this.app.globalsSystem;
         if (!scene) {
             this.propsContent.innerHTML = '<div class="empty-state"><p>A-Frame scene is loading...</p></div>';
             return;
@@ -1805,6 +2164,31 @@ export class UI {
             }
         });
         this.propsContent.appendChild(shadowGroup);
+
+        // Global background and environment presets.
+        if (globals) {
+            const background = globals.get('background') || {};
+            const environment = globals.get('environment') || {};
+            const worldGroup = document.createElement('div');
+            worldGroup.className = 'property-group';
+            const presets = ['default', 'forest', 'tron', 'starry', 'contact', 'egypt', 'checkerboard', 'osiris', 'dream', 'volcano', 'arches', 'japan'];
+            worldGroup.innerHTML = `
+                <div class="property-label">World</div>
+                <div class="input-group"><span>Background</span><input type="color" class="world-background" value="${typeof background.color === 'string' ? background.color : '#1a1a2e'}"></div>
+                <div class="input-group"><span>Environment</span>
+                    <select class="component-select world-environment">
+                        ${presets.map(preset => `<option value="${preset}" ${environment.preset === preset ? 'selected' : ''}>${preset}</option>`).join('')}
+                    </select>
+                </div>
+            `;
+            worldGroup.querySelector('.world-background').addEventListener('input', (e) => {
+                globals.set('background', { color: e.target.value });
+            });
+            worldGroup.querySelector('.world-environment').addEventListener('change', (e) => {
+                globals.set('environment', { preset: e.target.value });
+            });
+            this.propsContent.appendChild(worldGroup);
+        }
 
         // Sky colour / skybox shortcut
         const skyEl = scene.querySelector('a-sky');

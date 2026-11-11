@@ -49,6 +49,11 @@ export class FileManager {
             });
         }
 
+        // Include reusable A-Frame assets.
+        this.app.assetSystem?.getAssets().forEach(asset => {
+            data.push({ type: 'aframe-asset', asset });
+        });
+
         const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -100,6 +105,10 @@ export class FileManager {
                 data.push(entity);
             });
         }
+
+        this.app.assetSystem?.getAssets().forEach(asset => {
+            data.push({ type: 'aframe-asset', asset });
+        });
 
         // Save to localStorage
         localStorage.setItem('pixelAFrame-scene', JSON.stringify(data));
@@ -203,9 +212,14 @@ export class FileManager {
     loadData(data) {
         this.app.clearScene();
         
-        // Separate Three.js objects from A-Frame elements
-        const threeJSData = data.filter(item => item.type !== 'aframe-element');
+        // Separate Three.js objects, A-Frame elements and reusable assets.
+        const assetData = data.filter(item => item.type === 'aframe-asset');
+        const threeJSData = data.filter(item => item.type !== 'aframe-element' && item.type !== 'aframe-asset');
         const aframeData = data.filter(item => item.type === 'aframe-element');
+
+        assetData.forEach(item => {
+            if (item.asset) this.app.assetSystem?.addAsset(item.asset);
+        });
         
         let loadedCount = 0;
         

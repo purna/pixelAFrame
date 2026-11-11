@@ -45,8 +45,9 @@ export class AFrameSceneManager {
         // Set up event listeners
         this.setupEventListeners();
 
-        // Keep user-defined mixins in the scene's <a-assets>.
+        // Keep user-defined mixins and assets in the scene's <a-assets>.
         this.app.mixinSystem?.syncScene();
+        this.app.assetSystem?.syncScene();
         
         console.log('A-Frame scene initialized');
     }
@@ -283,7 +284,8 @@ export class AFrameSceneManager {
                 el.setAttribute('align', properties.align || 'center');
                 break;
             case 'a-sky':
-                el.setAttribute('color', properties.color || '#1a1a2e');
+                if (properties.src) el.setAttribute('src', properties.src);
+                else el.setAttribute('color', properties.color || '#1a1a2e');
                 break;
             case 'a-image':
                 el.setAttribute('src', properties.src || '');
