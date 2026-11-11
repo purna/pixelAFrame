@@ -1153,22 +1153,62 @@ export class UI {
                 </select>
             </div>
             <div class="property-group"><label class="property-label">Source URL</label><textarea rows="3" data-field="src">${asset.src || ''}</textarea></div>
+            <div class="property-group"><label class="property-label">Preview</label><div class="asset-media-preview" data-preview></div></div>
             <input type="file" data-file style="display:none">
             <button class="btn" data-choose style="width:100%;"><i class="fas fa-folder-open"></i> Replace File</button>
         `);
         const body = modal.overlay.querySelector('.modal-body');
         const fileInput = body.querySelector('[data-file]');
+        const typeField = body.querySelector('[data-field="type"]');
+        const srcField = body.querySelector('[data-field="src"]');
+        const preview = body.querySelector('[data-preview]');
+
+        const updatePreview = () => {
+            preview.innerHTML = '';
+            const type = typeField.value;
+            const src = srcField.value.trim();
+            if (!src) {
+                preview.innerHTML = '<span class="preview-empty">No preview available</span>';
+                return;
+            }
+            if (type === 'video') {
+                const video = document.createElement('video');
+                video.controls = true;
+                video.muted = true;
+                video.playsInline = true;
+                video.preload = 'metadata';
+                video.src = src;
+                preview.appendChild(video);
+            } else if (type === 'image' || type === 'panorama') {
+                const image = document.createElement('img');
+                image.src = src;
+                image.alt = body.querySelector('[data-field="name"]').value || 'Asset preview';
+                preview.appendChild(image);
+            } else if (type === 'audio') {
+                const audio = document.createElement('audio');
+                audio.controls = true;
+                audio.src = src;
+                preview.appendChild(audio);
+            } else {
+                preview.innerHTML = '<span class="preview-empty">3D model asset</span>';
+            }
+        };
+
+        typeField.addEventListener('change', updatePreview);
+        srcField.addEventListener('change', updatePreview);
         body.querySelector('[data-choose]').addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', () => {
             const file = fileInput.files && fileInput.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = () => {
-                body.querySelector('[data-field="src"]').value = reader.result;
+                srcField.value = reader.result;
                 if (!body.querySelector('[data-field="name"]').value) body.querySelector('[data-field="name"]').value = file.name;
+                updatePreview();
             };
             reader.readAsDataURL(file);
         });
+        updatePreview();
         modal.save.addEventListener('click', () => {
             this.app.assetSystem?.updateAsset(asset.id, {
                 name: body.querySelector('[data-field="name"]').value.trim() || asset.name,

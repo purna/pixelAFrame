@@ -272,3 +272,35 @@
 .editor-modal [data-choose] {
     margin-top: 8px;
 }
+
+/* Asset editor media preview */
+.asset-media-preview {
+    width: 100%;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #080b12;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.asset-media-preview video,
+.asset-media-preview img {
+    display: block;
+    width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+    background: #000;
+}
+
+.asset-media-preview audio {
+    width: calc(100% - 24px);
+}
+
+.asset-media-preview .preview-empty {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    padding: 20px;
+}
