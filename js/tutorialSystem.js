@@ -35,6 +35,9 @@ class TutorialSystem {
             }
         }, 1000); // Small delay to allow UI to fully initialize
 
+        // Check whether the user has completed the current lesson task.
+        this.taskTimer = setInterval(() => this.checkTask(), 400);
+
         this.isInitialized = true;
     }
 
@@ -56,6 +59,7 @@ class TutorialSystem {
                 <button id="tutorial-close">×</button>
             </div>
             <div id="tutorial-content"></div>
+            <div id="tutorial-task" style="display:none;"></div>
             <div id="tutorial-controls">
                 <div id="tutorial-buttons">
                     <button id="tutorial-prev" class="tutorial-btn" style="display: none;">Previous</button>
@@ -150,11 +154,33 @@ class TutorialSystem {
         // Position tutorial based on step configuration
         this.positionTutorial(step);
 
-        // Update content
+        // Update content (lesson text may contain safe inline markup such as code)
         const headingElement = document.getElementById('tutorial-heading');
         const contentElement = document.getElementById('tutorial-content');
         if (headingElement) headingElement.textContent = step.heading;
-        if (contentElement) contentElement.textContent = step.content;
+        if (contentElement) contentElement.innerHTML = step.content || '';
+
+        // Run optional step setup (for example, opening a panel)
+        if (typeof step.onEnter === 'function') {
+            try {
+                step.onEnter(this.app);
+            } catch (err) {
+                console.warn('Tutorial step setup failed:', err);
+            }
+        }
+
+        // Show the task that must be completed before moving on.
+        const taskElement = document.getElementById('tutorial-task');
+        if (taskElement) {
+            if (step.task) {
+                taskElement.style.display = 'block';
+                taskElement.innerHTML = `<i class="fas fa-circle-notch"></i> ${step.taskLabel || 'Complete this step to continue'}`;
+            } else {
+                taskElement.style.display = 'none';
+                taskElement.innerHTML = '';
+            }
+        }
+        this.updateTaskState();
 
         // Show/hide previous button
         const prevBtn = document.getElementById('tutorial-prev');
@@ -174,6 +200,32 @@ class TutorialSystem {
 
         // Add directional arrow based on arrowPosition config
         this.addDirectionalArrow(step.arrowPosition || step.position, step.arrowPositionOverride);
+    }
+
+    updateTaskState() {
+        const step = this.currentTutorialStep;
+        if (!step) return;
+
+        const taskElement = document.getElementById('tutorial-task');
+        const nextBtn = document.getElementById('tutorial-next');
+        const done = !step.task || !!step.task(this.app);
+
+        if (taskElement) {
+            if (done) {
+                taskElement.classList.add('complete');
+                taskElement.innerHTML = `<i class="fas fa-check-circle"></i> ${step.taskLabel || 'Step complete'}`;
+            } else {
+                taskElement.classList.remove('complete');
+                taskElement.innerHTML = `<i class="fas fa-circle-notch"></i> ${step.taskLabel || 'Complete this step to continue'}`;
+            }
+        }
+
+        if (nextBtn) nextBtn.disabled = !done;
+    }
+
+    checkTask() {
+        if (!this.config.isTutorialActive()) return;
+        this.updateTaskState();
     }
 
     positionTutorial(step) {
@@ -271,6 +323,12 @@ class TutorialSystem {
     }
 
     nextStep() {
+        // Do not advance until the current lesson task is complete.
+        if (this.currentTutorialStep?.task && !this.currentTutorialStep.task(this.app)) {
+            this.updateTaskState();
+            return;
+        }
+
         const nextStep = this.config.nextStep();
         if (nextStep) {
             this.showCurrentStep();

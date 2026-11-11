@@ -44,6 +44,9 @@ export class AFrameSceneManager {
         
         // Set up event listeners
         this.setupEventListeners();
+
+        // Keep user-defined mixins in the scene's <a-assets>.
+        this.app.mixinSystem?.syncScene();
         
         console.log('A-Frame scene initialized');
     }
@@ -168,6 +171,9 @@ export class AFrameSceneManager {
             // Sync layer manager with A-Frame entities
             this.app.layerManager?.setAFrameMode(true);
             this.app.layerManager?.renderAFrameEntities();
+
+            // Show the A-Frame world settings when entering the builder.
+            this.app.ui?.renderAFramePropertiesPanel?.(null);
             
             this.app.ui?.showNotification('A-Frame mode enabled', 'success');
         } else {
@@ -183,6 +189,9 @@ export class AFrameSceneManager {
             // Sync layer manager with Three.js objects
             this.app.layerManager?.setAFrameMode(false);
             this.app.layerManager?.render();
+
+            // Restore the Three.js properties view.
+            this.app.ui?.updateUI?.(this.app.selectedObject || null);
             
             // Trigger Three.js resize
             this.app.onWindowResize?.();
@@ -223,6 +232,9 @@ export class AFrameSceneManager {
         if (!this.sceneRoot) return null;
         
         const el = document.createElement(type);
+        if (!el.id) {
+            el.id = type.replace('a-', '') + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5);
+        }
         
         // Apply default properties
         if (properties.position) {
@@ -277,6 +289,28 @@ export class AFrameSceneManager {
                 el.setAttribute('src', properties.src || '');
                 el.setAttribute('width', properties.width || '4');
                 el.setAttribute('height', properties.height || '3');
+                break;
+            case 'a-video':
+                el.setAttribute('src', properties.src || '');
+                el.setAttribute('width', properties.width || '4');
+                el.setAttribute('height', properties.height || '3');
+                break;
+            case 'a-videosphere':
+                el.setAttribute('src', properties.src || '');
+                break;
+            case 'a-circle':
+                el.setAttribute('radius', properties.radius || '1');
+                el.setAttribute('color', properties.color || '#4CC3D9');
+                break;
+            case 'a-ring':
+                el.setAttribute('radius-inner', properties.radiusInner || '0.5');
+                el.setAttribute('radius-outer', properties.radiusOuter || '1');
+                el.setAttribute('color', properties.color || '#4CC3D9');
+                break;
+            case 'a-torus-knot':
+                el.setAttribute('radius', properties.radius || '0.5');
+                el.setAttribute('radius-tubular', properties.radiusTubular || '0.1');
+                el.setAttribute('color', properties.color || '#4CC3D9');
                 break;
             case 'a-gltf-model':
                 el.setAttribute('src', properties.src || '');

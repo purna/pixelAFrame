@@ -114,6 +114,63 @@ export class AFrameFactory {
         if (assetSounds.includes(type)) {
             return this.createAssetSound(type, options);
         }
+
+        // Some elements need a component added after the entity is created.
+        // Handle those explicitly (going through the factory helpers here would
+        // recurse back into createElement).
+        if (type === 'animation') {
+            const el = this.app.aframeManager.addEntity('a-entity', options);
+            if (el) {
+                el.setAttribute('animation', {
+                    property: options.property || 'rotation',
+                    to: options.to || '0 360 0',
+                    from: options.from || '0 0 0',
+                    dur: options.dur || 2000,
+                    delay: options.delay || 0,
+                    easing: options.easing || 'linear',
+                    loop: options.loop !== undefined ? options.loop : true,
+                    startEvents: options.startEvents || 'start-anim',
+                    pauseEvents: options.pauseEvents || 'stop-anim'
+                });
+            }
+            return el;
+        }
+
+        if (type === 'animation-mixer') {
+            const el = this.app.aframeManager.addEntity('a-entity', options);
+            if (el) el.setAttribute('animation-mixer', options.mixer || '');
+            return el;
+        }
+
+        if (type === 'environment') {
+            const el = this.app.aframeManager.addEntity('a-entity', options);
+            if (el) {
+                el.setAttribute('environment', options.environment || {
+                    preset: options.preset || 'default',
+                    skyType: options.skyType || 'atmosphere',
+                    lighting: options.lighting || 'distant',
+                    shadow: options.shadow !== undefined ? options.shadow : true,
+                    fog: options.fog !== undefined ? options.fog : 0.5
+                });
+            }
+            return el;
+        }
+
+        if (type === 'light') {
+            const el = this.app.aframeManager.addEntity('a-light', options);
+            if (el) el.setAttribute('type', options.type || 'point');
+            return el;
+        }
+
+        if (type === 'camera') {
+            const el = this.app.aframeManager.addEntity('a-entity', options);
+            if (el) {
+                el.setAttribute('camera', options.camera || { fov: options.fov || 80 });
+                el.setAttribute('look-controls', options.lookControls || '');
+                el.setAttribute('wasd-controls', options.wasdControls || '');
+            }
+            return el;
+        }
         
         const aframeType = this.elementTypes[type] || 'a-entity';
         return this.app.aframeManager.addEntity(aframeType, options);

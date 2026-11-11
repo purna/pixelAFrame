@@ -1,3 +1,5 @@
+import { AFrameFeatureScript } from './aframeFeatures.js';
+
 export class FileManager {
     constructor(app) {
         this.app = app;
@@ -394,24 +396,38 @@ body {
     // Generate complete A-Frame HTML document
     generateAFrameHTML(entities) {
         let entitiesHTML = '';
+
+        const escapeAttr = (value) => String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
         
         entities.forEach(entity => {
             const tagName = entity.tagName || 'a-entity';
             let attrs = '';
             
             // Add transform attributes
-            if (entity.position) attrs += ` position="${entity.position}"`;
-            if (entity.rotation) attrs += ` rotation="${entity.rotation}"`;
-            if (entity.scale) attrs += ` scale="${entity.scale}"`;
+            if (entity.position) attrs += ` position="${escapeAttr(entity.position)}"`;
+            if (entity.rotation) attrs += ` rotation="${escapeAttr(entity.rotation)}"`;
+            if (entity.scale) attrs += ` scale="${escapeAttr(entity.scale)}"`;
             
             // Add all other attributes
             Object.keys(entity).forEach(key => {
                 if (key !== 'type' && key !== 'tagName' && key !== 'position' && key !== 'rotation' && key !== 'scale') {
-                    attrs += ` ${key}="${entity[key]}"`;
+                    attrs += ` ${key}="${escapeAttr(entity[key])}"`;
                 }
             });
             
             entitiesHTML += `    <${tagName}${attrs}></${tagName}>\n`;
+        });
+
+        // Keep scene-wide settings (fog, shadows) in the exported project.
+        const sceneEl = document.getElementById('aframe-scene');
+        let sceneAttrs = '';
+        ['fog', 'shadow', 'background', 'environment'].forEach(name => {
+            const attr = sceneEl && sceneEl.attributes.getNamedItem(name);
+            if (attr) sceneAttrs += ` ${name}="${attr.value}"`;
         });
 
         return `<!DOCTYPE html>
@@ -426,10 +442,14 @@ body {
     <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.2.0/dist/aframe-extras.min.js"></script>
     <!-- A-Frame Environment Component -->
     <script src="https://unpkg.com/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
+    <!-- Pixel AFrame behaviours and particle effects -->
+    <script>${AFrameFeatureScript}</script>
 </head>
 <body>
-    <a-scene>
+    <a-scene${sceneAttrs}>
         <a-assets>
+            <!-- Student assets -->
+${this.app.assetSystem?.getExportHTML() || ''}
             <!-- Preload assets -->
             <a-asset-item id="xbot-model" src="assets/Xbot.glb"></a-asset-item>
             <a-asset-item id="ybot-model" src="assets/Ybot.glb"></a-asset-item>

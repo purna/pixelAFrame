@@ -1425,9 +1425,8 @@ input[type="color"] {
 .tool-submenu {
     display: none;
     position: fixed !important;
-    /* Changed from absolute to fixed */
+    /* Just right of the toolbar */
     left: 68px !important;
-    /* Just right of the 60px toolbar + 8px gap */
     top: var(--submenu-top, 100px);
     /* Will be set dynamically via JS */
     background: var(--bg-dark);
@@ -1435,11 +1434,30 @@ input[type="color"] {
     border-radius: 8px;
     padding: 8px;
     flex-direction: column;
+    align-items: stretch;
     gap: 6px;
     z-index: 1000;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
     min-width: 48px;
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
     backdrop-filter: blur(10px);
+}
+
+.tool-submenu.open {
+    display: flex;
+}
+
+.tool-submenu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tool-submenu::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
 }
 
 /* Optional: Add a little pointer arrow */
@@ -1447,7 +1465,7 @@ input[type="color"] {
     content: '';
     position: absolute;
     left: -6px;
-    top: 16px;
+    top: var(--submenu-arrow-top, 16px);
     width: 0;
     height: 0;
     border-top: 8px solid transparent;
@@ -1518,6 +1536,10 @@ input[type="color"] {
     margin-top: 4px;
     border-top: 1px solid var(--border-color);
     font-weight: 600;
+    position: sticky;
+    top: -8px;
+    background: var(--bg-dark);
+    z-index: 2;
 }
 
 .tool-submenu-category:first-child {

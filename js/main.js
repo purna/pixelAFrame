@@ -16,11 +16,18 @@ import { TutorialConfig } from './tutorialConfig.js';
 import { TutorialSystem } from './tutorialSystem.js';
 import { AFrameSceneManager } from './aframeSceneManager.js';
 import { AFrameFactory } from './aframeFactory.js';
+import { registerAFrameFeatures } from './aframeFeatures.js';
+import { AFrameComponentSystem } from './aframeComponentSystem.js';
+import { AFrameMixinSystem } from './aframeMixinSystem.js';
+import { AFrameGlobalsSystem } from './aframeGlobalsSystem.js';
+import { AFrameAssetSystem } from './aframeAssetSystem.js';
 import './notifications.js';
 
 
 class StageApp {
     constructor() {
+        registerAFrameFeatures();
+
         this.scene = null;
         this.camera = null;
         this.renderer = null;
@@ -54,6 +61,12 @@ class StageApp {
         // Initialize A-Frame Manager
         this.aframeManager = new AFrameSceneManager(this);
         this.aframeFactory = new AFrameFactory(this);
+
+        // A-Frame authoring systems
+        this.componentSystem = new AFrameComponentSystem(this);
+        this.mixinSystem = new AFrameMixinSystem(this);
+        this.globalsSystem = new AFrameGlobalsSystem(this);
+        this.assetSystem = new AFrameAssetSystem(this);
 
         this.init();
     }
@@ -914,6 +927,12 @@ class StageApp {
         console.log('A-Frame button handlers initialized');
     }
     
+    // Start one of the built-in A-Frame lessons.
+    startTutorial(tutorialId) {
+        if (!this.tutorialSystem) return;
+        this.tutorialSystem.startTutorial(tutorialId || 'main');
+    }
+
     // Add A-Frame element (called from UI)
     addAFrameElement(type, options = {}) {
         if (!this.aframeManager) {
@@ -930,10 +949,73 @@ class StageApp {
         const element = this.aframeFactory.createElement(type, options);
         
         if (element) {
+            // Select the new entity so it immediately appears in the layer list
+            // and properties panel.
+            if (this.aframeManager.selectEntity && element.tagName) {
+                this.aframeManager.selectEntity(element);
+            }
             this.ui.showNotification(`Added ${type}`, 'success');
         }
         
         return element;
+    }
+
+    // Scene-wide A-Frame effects students can add without writing code.
+    addAFrameEffect(type) {
+        if (!this.aframeManager) return;
+
+        if (!this.aframeManager.isAFrameMode) {
+            this.aframeManager.toggleAFrameMode(true);
+        }
+
+        const scene = document.getElementById('aframe-scene');
+
+        switch (type) {
+            case 'fog':
+                if (scene) {
+                    scene.setAttribute('fog', 'type: exponential; color: #1a1a2e; density: 0.028');
+                }
+                this.ui.showNotification('Fog added. Use Scene Settings to adjust it.', 'success');
+                break;
+
+            case 'shadows':
+                if (scene) {
+                    scene.setAttribute('shadow', 'type: pcfsoft');
+                    scene.querySelectorAll('a-light').forEach(light => {
+                        light.setAttribute('shadow', 'cast', true);
+                    });
+                }
+                this.ui.showNotification('Shadows enabled on the scene lights.', 'success');
+                break;
+
+            case 'particles':
+            case 'snow':
+            case 'sparks': {
+                const entity = this.aframeFactory.createElement('entity', {
+                    position: '0 0 -4'
+                });
+                if (!entity) break;
+
+                const presets = {
+                    particles: 'count: 180; color: #7dd3fc; size: 0.09; speed: 0.7; spread: 5; height: 5',
+                    snow: 'count: 260; color: #ffffff; size: 0.06; speed: 0.45; spread: 8; height: 7',
+                    sparks: 'count: 140; color: #ffb347; size: 0.07; speed: 1.4; spread: 3; height: 3'
+                };
+                entity.setAttribute('studio-particles', presets[type]);
+                entity.setAttribute('id', type + '-' + Date.now());
+                this.aframeManager.selectEntity(entity);
+                this.ui.showNotification(`Added ${type} effect`, 'success');
+                break;
+            }
+
+            case 'skybox':
+                // A sky element is editable in the properties panel (colour or image URL).
+                this.addAFrameElement('sky');
+                break;
+
+            default:
+                console.warn('Unknown A-Frame effect:', type);
+        }
     }
 
     // --- LOOP ---

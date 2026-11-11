@@ -30,12 +30,24 @@ export class UI {
         this.loadSettings();
         this.activeSubmenu = null; // Track currently open submenu
         this.setupPanelTabs();
+
+        // Submenus are positioned in viewport coordinates, so close them when
+        // the toolbar or viewport moves.
+        window.addEventListener('resize', () => this.closeAllSubmenus());
+        document.getElementById('tools-container')?.addEventListener('scroll', () => this.closeAllSubmenus());
     }
 
     setupEventListeners() {
         // Toolbar Clicks
         document.getElementById('tools-container').addEventListener('click', (e) => {
-            const btn = e.target.closest('.tool-btn');
+            const actionBtn = e.target.closest('.tool-btn[data-action]');
+            const clickedInsideSubmenu = e.target.closest('.tool-submenu');
+
+            // Ignore clicks on submenu headings/padding so they don't close or
+            // re-toggle the menu by accident.
+            if (clickedInsideSubmenu && !actionBtn) return;
+
+            const btn = actionBtn || e.target.closest('.tool-btn');
             if (!btn) return;
 
             // Handle Settings
@@ -66,6 +78,15 @@ export class UI {
 
             // Close any open submenus when performing an action
             this.closeAllSubmenus();
+
+            // Make sure the properties/layers view is visible so the newly
+            // added or selected item is actually shown to the user.
+            const materialsSection = document.getElementById('materials-section');
+            const sceneSection = document.getElementById('scene-section');
+            if ((materialsSection && materialsSection.style.display !== 'none') ||
+                (sceneSection && sceneSection.style.display !== 'none')) {
+                this.resetPanelToDefault();
+            }
 
             // Remove active class from all tools
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
@@ -178,6 +199,18 @@ export class UI {
             }
         });
 
+        // A-Frame entity selection updates the properties panel. In A-Frame mode
+        // this is the primary selection mechanism, so it must always render.
+        window.addEventListener('aframe-entity-selected', (e) => {
+            this.renderAFramePropertiesPanel(e.detail?.entity);
+        });
+        window.addEventListener('aframe-entity-deselected', () => {
+            this.renderAFramePropertiesPanel(null);
+        });
+        window.addEventListener('aframe-entity-updated', (e) => {
+            this.renderAFramePropertiesPanel(e.detail?.entity);
+        });
+
         // Materials toolbar button
         document.getElementById('tool-materials')?.addEventListener('click', () => {
             // Show panel if hidden when clicking materials button
@@ -186,6 +219,15 @@ export class UI {
                 this.togglePropertiesPanel();
             }
             this.toggleMaterialsView();
+        });
+
+        // Assets toolbar button
+        document.getElementById('tool-assets')?.addEventListener('click', () => {
+            const panel = document.getElementById('right-panel');
+            if (panel && panel.classList.contains('hidden')) {
+                this.togglePropertiesPanel();
+            }
+            this.toggleAssetsView();
         });
 
         // Scene settings toolbar button - now opens scene panel in right menu
@@ -515,6 +557,7 @@ export class UI {
     toggleMaterialsView() {
         const materialsSection = document.getElementById('materials-section');
         const sceneSection = document.getElementById('scene-section');
+        const assetsSection = document.getElementById('assets-section');
         const propsContent = document.getElementById('props-content');
         const layersList = document.getElementById('layers-list');
 
@@ -522,26 +565,18 @@ export class UI {
             const isMaterialsVisible = materialsSection.style.display !== 'none';
 
             if (isMaterialsVisible) {
-                // Switch to normal view
-                materialsSection.style.display = 'none';
-                sceneSection.style.display = 'none';
-                propsContent.style.display = 'block';
-                layersList.style.display = 'block';
-                document.querySelectorAll('.panel-header').forEach(header => {
-                    header.style.display = 'flex';
-                });
+                this.resetPanelToDefault();
             } else {
-                // Switch to materials view
                 materialsSection.style.display = 'flex';
                 sceneSection.style.display = 'none';
+                if (assetsSection) assetsSection.style.display = 'none';
                 propsContent.style.display = 'none';
                 layersList.style.display = 'none';
-                document.querySelectorAll('.panel-header').forEach((header, index) => {
-                    if (index === 2) { // Materials header
-                        header.style.display = 'flex';
-                    } else {
-                        header.style.display = 'none';
-                    }
+                document.querySelectorAll('.panel-header').forEach(header => {
+                    header.style.display = 'none';
+                });
+                materialsSection.querySelectorAll('.panel-header').forEach(header => {
+                    header.style.display = 'flex';
                 });
             }
 
@@ -550,6 +585,177 @@ export class UI {
                 this.app.materialsManager.renderMaterialsSection();
             }
         }
+    }
+
+    toggleAssetsView() {
+        const assetsSection = document.getElementById('assets-section');
+        const sceneSection = document.getElementById('scene-section');
+        const materialsSection = document.getElementById('materials-section');
+        const propsContent = document.getElementById('props-content');
+        const layersList = document.getElementById('layers-list');
+
+        if (!assetsSection) return;
+
+        const isAssetsVisible = assetsSection.style.display !== 'none';
+        if (isAssetsVisible) {
+            this.resetPanelToDefault();
+            return;
+        }
+
+        assetsSection.style.display = 'flex';
+        if (sceneSection) sceneSection.style.display = 'none';
+        if (materialsSection) materialsSection.style.display = 'none';
+        if (propsContent) propsContent.style.display = 'none';
+        if (layersList) layersList.style.display = 'none';
+
+        document.querySelectorAll('.panel-header').forEach(header => {
+            header.style.display = 'none';
+        });
+        assetsSection.querySelectorAll('.panel-header').forEach(header => {
+            header.style.display = 'flex';
+        });
+
+        this.renderAssetsSection();
+    }
+
+    renderAssetsSection() {
+        const container = document.getElementById('assets-content');
+        const assetSystem = this.app.assetSystem;
+        if (!container) return;
+        if (!assetSystem) {
+            container.innerHTML = '<div class="empty-state">Asset system is not available.</div>';
+            return;
+        }
+
+        container.innerHTML = '';
+
+        // Add asset form
+        const form = document.createElement('div');
+        form.className = 'property-group';
+        form.innerHTML = `
+            <div class="property-label">Add Asset</div>
+            <div class="input-group"><span>Name</span><input type="text" class="asset-name" placeholder="My panorama"></div>
+            <div class="input-group"><span>Type</span>
+                <select class="component-select asset-type">
+                    <option value="image">Image</option>
+                    <option value="panorama">360 Panorama</option>
+                    <option value="video">Video</option>
+                    <option value="audio">Audio</option>
+                    <option value="model">3D Model</option>
+                </select>
+            </div>
+            <div class="input-group"><span>URL</span><input type="text" class="asset-url" placeholder="https://..."></div>
+            <input type="file" class="asset-file" style="display:none">
+            <button class="btn asset-file-btn" style="width:100%; margin-top:5px;"><i class="fas fa-folder-open"></i> Choose File</button>
+            <button class="btn primary asset-add-btn" style="width:100%; margin-top:5px;"><i class="fas fa-plus"></i> Add Asset</button>
+        `;
+
+        const fileInput = form.querySelector('.asset-file');
+        form.querySelector('.asset-file-btn').addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files && fileInput.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                form.querySelector('.asset-url').value = reader.result;
+                if (!form.querySelector('.asset-name').value) {
+                    form.querySelector('.asset-name').value = file.name;
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+
+        form.querySelector('.asset-add-btn').addEventListener('click', () => {
+            const src = form.querySelector('.asset-url').value.trim();
+            const name = form.querySelector('.asset-name').value.trim();
+            const type = form.querySelector('.asset-type').value;
+            if (!src) {
+                this.showNotification('Enter an asset URL or choose a file first.', 'error');
+                return;
+            }
+            assetSystem.addAsset({ name, type, src });
+            this.renderAssetsSection();
+            this.showNotification(`Asset "${name || type}" added`, 'success');
+        });
+
+        container.appendChild(form);
+
+        const assets = assetSystem.getAssets();
+        if (assets.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'empty-state';
+            empty.innerHTML = '<p>No assets yet.</p><p>Add an image, panorama, video, audio file or model.</p>';
+            container.appendChild(empty);
+            return;
+        }
+
+        const listHeader = document.createElement('div');
+        listHeader.className = 'property-label';
+        listHeader.textContent = `Assets (${assets.length})`;
+        listHeader.style.marginTop = '10px';
+        container.appendChild(listHeader);
+
+        assets.forEach(asset => {
+            const row = document.createElement('div');
+            row.className = 'material-item';
+            row.style.alignItems = 'center';
+
+            const preview = document.createElement('div');
+            preview.className = 'material-preview';
+            if (asset.type === 'image' || asset.type === 'panorama') {
+                preview.style.backgroundImage = `url("${asset.src}")`;
+                preview.style.backgroundSize = 'cover';
+                preview.style.backgroundPosition = 'center';
+            } else {
+                const icons = { video: 'fa-video', audio: 'fa-volume-up', model: 'fa-cubes' };
+                preview.innerHTML = `<i class="fas ${icons[asset.type] || 'fa-file'}" style="display:flex;align-items:center;justify-content:center;height:100%;"></i>`;
+            }
+            preview.title = asset.name;
+
+            const info = document.createElement('div');
+            info.className = 'material-info';
+            info.innerHTML = `<div style="font-size:0.75rem; color:var(--text-primary); font-weight:bold;">${asset.name}</div><div style="font-size:0.65rem; color:var(--text-secondary);">${asset.type} · #${asset.id}</div>`;
+
+            const actions = document.createElement('div');
+            actions.className = 'material-actions';
+
+            const placeBtn = document.createElement('button');
+            placeBtn.className = 'btn icon-only';
+            placeBtn.title = 'Place in scene';
+            placeBtn.innerHTML = '<i class="fas fa-plus"></i>';
+            placeBtn.addEventListener('click', () => {
+                assetSystem.addAssetToScene(asset.id);
+            });
+
+            const applyBtn = document.createElement('button');
+            applyBtn.className = 'btn icon-only';
+            applyBtn.title = 'Use on selected element';
+            applyBtn.innerHTML = '<i class="fas fa-check"></i>';
+            applyBtn.addEventListener('click', () => {
+                if (!assetSystem.applyAssetToSelected(asset.id)) {
+                    this.showNotification('Select an A-Frame element first.', 'info');
+                }
+            });
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn icon-only';
+            deleteBtn.title = 'Delete asset';
+            deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+            deleteBtn.addEventListener('click', () => {
+                if (!window.confirm(`Delete asset "${asset.name}"?`)) return;
+                assetSystem.removeAsset(asset.id);
+                this.renderAssetsSection();
+            });
+
+            actions.appendChild(placeBtn);
+            actions.appendChild(applyBtn);
+            actions.appendChild(deleteBtn);
+
+            row.appendChild(preview);
+            row.appendChild(info);
+            row.appendChild(actions);
+            container.appendChild(row);
+        });
     }
 
     setupPanelTabs() {
@@ -587,20 +793,38 @@ export class UI {
         const submenu = btn.querySelector('.tool-submenu');
         if (!submenu) return;
 
-        const isOpen = submenu.style.display === 'flex';
+        // Clicking the open menu again closes it. Clicking a different menu
+        // closes the previous one and opens the new one.
+        const wasOpen = submenu.classList.contains('open');
         this.closeAllSubmenus();
+        if (wasOpen) return;
 
-        if (!isOpen) {
-            // Calculate vertical position based on button in viewport
-            const btnRect = btn.getBoundingClientRect();
-            const topOffset = btnRect.top + btnRect.height / 2 - 24; // Center align roughly
+        // Show it first so the real height can be measured.
+        submenu.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
 
-            submenu.style.display = 'flex';
-            submenu.style.top = `${topOffset}px`;
-            submenu.style.setProperty('--submenu-top', `${topOffset}px`); // For CSS custom prop if needed
+        const margin = 8;
+        const maxHeight = window.innerHeight - margin * 2;
+        submenu.style.maxHeight = `${maxHeight}px`;
 
-            this.activeSubmenu = submenu;
-        }
+        const btnRect = btn.getBoundingClientRect();
+        const menuHeight = Math.min(submenu.scrollHeight, maxHeight);
+
+        // Keep the menu inside the viewport, scrolling internally when it is
+        // taller than the available space (important for the A-Frame menu).
+        let top = btnRect.top + btnRect.height / 2 - 24;
+        top = Math.max(margin, Math.min(top, window.innerHeight - menuHeight - margin));
+
+        const arrowTop = Math.max(
+            8,
+            Math.min(btnRect.top + btnRect.height / 2 - top - 8, menuHeight - 24)
+        );
+
+        submenu.style.top = `${top}px`;
+        submenu.style.setProperty('--submenu-top', `${top}px`);
+        submenu.style.setProperty('--submenu-arrow-top', `${arrowTop}px`);
+
+        this.activeSubmenu = submenu;
     }
     handleSubmenuClick(e) {
         e.stopPropagation(); // Prevent event bubbling to toolbar handler
@@ -614,6 +838,9 @@ export class UI {
 
         // Close submenu
         this.closeAllSubmenus();
+
+        // Make sure the properties/layers view is visible
+        this.resetPanelToDefault();
 
         // Remove active class from all tools
         document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
@@ -629,7 +856,9 @@ export class UI {
 
     closeAllSubmenus() {
         document.querySelectorAll('.tool-submenu').forEach(menu => {
-            menu.style.display = 'none';
+            menu.classList.remove('open');
+            const parent = menu.closest('.menu-parent');
+            if (parent) parent.setAttribute('aria-expanded', 'false');
         });
         this.activeSubmenu = null;
     }
@@ -674,11 +903,13 @@ export class UI {
         // Show scene objects and properties, hide materials and scene export
         const sceneSection = document.getElementById('scene-section');
         const materialsSection = document.getElementById('materials-section');
+        const assetsSection = document.getElementById('assets-section');
         const propsContent = document.getElementById('props-content');
         const layersList = document.getElementById('layers-list');
 
         if (sceneSection) sceneSection.style.display = 'none';
         if (materialsSection) materialsSection.style.display = 'none';
+        if (assetsSection) assetsSection.style.display = 'none';
         if (propsContent) propsContent.style.display = 'block';
         if (layersList) layersList.style.display = 'block';
 
@@ -905,6 +1136,712 @@ export class UI {
         setVal('scl-x', scale.x);
         setVal('scl-y', scale.y);
         setVal('scl-z', scale.z);
+    }
+
+    // --- A-FRAME PROPERTIES PANEL ---
+    renderAFramePropertiesPanel(entity) {
+        if (this.app.aframeManager && !this.app.aframeManager.isAFrameMode) return;
+
+        const sceneSection = document.getElementById('scene-section');
+        const materialsSection = document.getElementById('materials-section');
+        const assetsSection = document.getElementById('assets-section');
+        const propsContent = document.getElementById('props-content');
+        const layersList = document.getElementById('layers-list');
+
+        if (!propsContent) return;
+
+        if (sceneSection) sceneSection.style.display = 'none';
+        if (materialsSection) materialsSection.style.display = 'none';
+        if (assetsSection) assetsSection.style.display = 'none';
+        propsContent.style.display = 'block';
+        if (layersList) layersList.style.display = 'block';
+        document.querySelectorAll('.panel-header').forEach(header => {
+            header.style.display = 'flex';
+        });
+
+        const panel = document.getElementById('right-panel');
+        if (panel && panel.classList.contains('hidden')) {
+            this.togglePropertiesPanel();
+        }
+
+        this.propsContent.innerHTML = '';
+
+        if (!entity) {
+            this.renderAFrameSceneSettings();
+            return;
+        }
+
+        const parseVec = (value, fallback) => {
+            if (value && typeof value === 'object') {
+                return {
+                    x: Number(value.x) || 0,
+                    y: Number(value.y) || 0,
+                    z: Number(value.z) || 0
+                };
+            }
+            const parts = String(value || fallback).trim().split(/\s+/).map(Number);
+            return {
+                x: Number.isFinite(parts[0]) ? parts[0] : fallback[0],
+                y: Number.isFinite(parts[1]) ? parts[1] : fallback[1],
+                z: Number.isFinite(parts[2]) ? parts[2] : fallback[2]
+            };
+        };
+
+        const toColorValue = (value, fallback = '#4CC3D9') => {
+            if (value && typeof value === 'object' && value.getHexString) {
+                return '#' + value.getHexString();
+            }
+            if (typeof value === 'string' && /^#[0-9a-f]{3,8}$/i.test(value)) {
+                return value;
+            }
+            return fallback;
+        };
+
+        const header = document.createElement('div');
+        header.className = 'property-group';
+        header.innerHTML = `<div style="font-weight:bold; color:var(--accent-primary); border-bottom:1px solid #333; padding-bottom:5px;">${entity.id || entity.tagName.toLowerCase()}</div><div style="font-size:0.7rem; color:var(--text-secondary); margin-top:4px;">${entity.tagName.toLowerCase()}</div>`;
+        this.propsContent.appendChild(header);
+
+        const idGroup = document.createElement('div');
+        idGroup.className = 'property-group';
+        idGroup.innerHTML = `<div class="property-label">Element ID</div><input type="text" class="component-select" value="${entity.id || ''}" placeholder="e.g. welcome-box">`;
+        idGroup.querySelector('input').addEventListener('change', (e) => {
+            const newId = e.target.value.trim();
+            if (newId) entity.id = newId;
+        });
+        this.propsContent.appendChild(idGroup);
+
+        const addVec3 = (label, attribute, fallback) => {
+            const vec = parseVec(entity.getAttribute(attribute), fallback);
+            const group = document.createElement('div');
+            group.className = 'property-group';
+            group.innerHTML = `<div class="property-label">${label}</div>`;
+            const row = document.createElement('div');
+            row.className = 'input-row';
+
+            ['x', 'y', 'z'].forEach(axis => {
+                const inputGroup = document.createElement('div');
+                inputGroup.className = 'input-group';
+                inputGroup.innerHTML = `<span>${axis.toUpperCase()}</span><input type="number" step="0.1" value="${vec[axis]}">`;
+                const input = inputGroup.querySelector('input');
+                input.addEventListener('change', () => {
+                    vec[axis] = Number(input.value) || 0;
+                    entity.setAttribute(attribute, `${vec.x} ${vec.y} ${vec.z}`);
+                });
+                row.appendChild(inputGroup);
+            });
+
+            group.appendChild(row);
+            this.propsContent.appendChild(group);
+        };
+
+        addVec3('Position', 'position', [0, 1, -3]);
+        addVec3('Rotation', 'rotation', [0, 0, 0]);
+        addVec3('Scale', 'scale', [1, 1, 1]);
+
+        // Visible toggle
+        const visibleGroup = document.createElement('div');
+        visibleGroup.className = 'property-group';
+        visibleGroup.innerHTML = `<label style="display:flex; align-items:center; gap:8px; font-size:0.8rem;"><input type="checkbox" ${entity.getAttribute('visible') !== false ? 'checked' : ''}> Visible</label>`;
+        visibleGroup.querySelector('input').addEventListener('change', (e) => {
+            entity.setAttribute('visible', e.target.checked);
+        });
+        this.propsContent.appendChild(visibleGroup);
+
+        // Material controls
+        const materialAttr = entity.getAttribute('material') || {};
+        const materialGroup = document.createElement('div');
+        materialGroup.className = 'property-group';
+        materialGroup.innerHTML = `<div class="property-label">Material</div>`;
+
+        const colorRow = document.createElement('div');
+        colorRow.className = 'input-group';
+        colorRow.innerHTML = `<span>Color</span><input type="color" value="${toColorValue(materialAttr.color || entity.getAttribute('color'))}">`;
+        colorRow.querySelector('input').addEventListener('input', (e) => {
+            entity.setAttribute('material', 'color', e.target.value);
+        });
+        materialGroup.appendChild(colorRow);
+
+        ['metalness', 'roughness'].forEach(prop => {
+            const row = document.createElement('div');
+            row.className = 'input-group';
+            row.innerHTML = `<span>${prop[0].toUpperCase() + prop.slice(1)}</span><input type="number" min="0" max="1" step="0.05" value="${Number(materialAttr[prop] ?? 0.5)}">`;
+            row.querySelector('input').addEventListener('change', (e) => {
+                entity.setAttribute('material', prop, Number(e.target.value));
+            });
+            materialGroup.appendChild(row);
+        });
+
+        this.propsContent.appendChild(materialGroup);
+
+        // Text value (a-text)
+        if (entity.tagName.toLowerCase() === 'a-text') {
+            const textGroup = document.createElement('div');
+            textGroup.className = 'property-group';
+            textGroup.innerHTML = `<div class="property-label">Text</div><input type="text" style="width:100%;" value="${entity.getAttribute('value') || ''}">`;
+            textGroup.querySelector('input').addEventListener('change', (e) => {
+                entity.setAttribute('value', e.target.value);
+            });
+            this.propsContent.appendChild(textGroup);
+        }
+
+        const tag = entity.tagName.toLowerCase();
+        const mediaTags = ['a-image', 'a-video', 'a-sky', 'a-videosphere', 'a-sound', 'a-gltf-model'];
+
+        // Media source (image, video, panorama, audio, model)
+        if (mediaTags.includes(tag)) {
+            const mediaGroup = document.createElement('div');
+            mediaGroup.className = 'property-group';
+            mediaGroup.innerHTML = `<div class="property-label">Media</div>`;
+
+            const srcRow = document.createElement('div');
+            srcRow.className = 'input-group';
+            const srcLabel = document.createElement('span');
+            srcLabel.textContent = 'Source';
+            const srcInput = document.createElement('input');
+            srcInput.type = 'text';
+            srcInput.placeholder = 'https://... or choose a file';
+            srcInput.value = entity.getAttribute('src') || '';
+            srcInput.addEventListener('change', () => {
+                entity.setAttribute('src', srcInput.value.trim());
+            });
+            srcRow.appendChild(srcLabel);
+            srcRow.appendChild(srcInput);
+            mediaGroup.appendChild(srcRow);
+
+            const fileRow = document.createElement('div');
+            fileRow.style.marginTop = '6px';
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.style.display = 'none';
+            fileInput.accept = tag === 'a-sound' ? 'audio/*' :
+                (tag === 'a-video' || tag === 'a-videosphere') ? 'video/*' :
+                tag === 'a-gltf-model' ? '.glb,.gltf' : 'image/*';
+            fileInput.addEventListener('change', () => {
+                const file = fileInput.files && fileInput.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    entity.setAttribute('src', reader.result);
+                    srcInput.value = file.name;
+                };
+                reader.readAsDataURL(file);
+            });
+            const chooseBtn = document.createElement('button');
+            chooseBtn.className = 'btn';
+            chooseBtn.style.width = '100%';
+            chooseBtn.innerHTML = '<i class="fas fa-folder-open"></i> Choose File';
+            chooseBtn.addEventListener('click', () => fileInput.click());
+            fileRow.appendChild(fileInput);
+            fileRow.appendChild(chooseBtn);
+            mediaGroup.appendChild(fileRow);
+
+            this.propsContent.appendChild(mediaGroup);
+
+            if (tag === 'a-sound') {
+                const soundGroup = document.createElement('div');
+                soundGroup.className = 'property-group';
+                soundGroup.innerHTML = `
+                    <div class="property-label">Audio</div>
+                    <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem;"><input type="checkbox" class="sound-autoplay" ${entity.getAttribute('autoplay') === true ? 'checked' : ''}> Autoplay</label>
+                    <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem;"><input type="checkbox" class="sound-loop" ${entity.getAttribute('loop') === true ? 'checked' : ''}> Loop</label>
+                    <div class="input-group"><span>Volume</span><input type="number" class="sound-volume" min="0" max="1" step="0.05" value="${Number(entity.getAttribute('volume') ?? 1)}"></div>
+                `;
+                soundGroup.querySelector('.sound-autoplay').addEventListener('change', (e) => entity.setAttribute('autoplay', e.target.checked));
+                soundGroup.querySelector('.sound-loop').addEventListener('change', (e) => entity.setAttribute('loop', e.target.checked));
+                soundGroup.querySelector('.sound-volume').addEventListener('change', (e) => entity.setAttribute('volume', Number(e.target.value)));
+                this.propsContent.appendChild(soundGroup);
+            }
+        }
+
+        // Particle effect controls
+        const particleAttr = entity.getAttribute('studio-particles');
+        if (particleAttr) {
+            const particleGroup = document.createElement('div');
+            particleGroup.className = 'property-group';
+            particleGroup.innerHTML = `<div class="property-label">Particle Effect</div>`;
+
+            ['count', 'size', 'speed', 'spread', 'height', 'opacity'].forEach(prop => {
+                const row = document.createElement('div');
+                row.className = 'input-group';
+                row.innerHTML = `<span>${prop[0].toUpperCase() + prop.slice(1)}</span><input type="number" step="0.05" value="${Number(particleAttr[prop] ?? 0)}">`;
+                row.querySelector('input').addEventListener('change', (e) => {
+                    entity.setAttribute('studio-particles', prop, Number(e.target.value));
+                });
+                particleGroup.appendChild(row);
+            });
+
+            const colorRow = document.createElement('div');
+            colorRow.className = 'input-group';
+            colorRow.innerHTML = `<span>Color</span><input type="color" value="${toColorValue(particleAttr.color, '#7dd3fc')}">`;
+            colorRow.querySelector('input').addEventListener('input', (e) => {
+                entity.setAttribute('studio-particles', 'color', e.target.value);
+            });
+            particleGroup.appendChild(colorRow);
+
+            this.propsContent.appendChild(particleGroup);
+        }
+
+        // Component and mixin authoring systems
+        this.renderAFrameComponentSection(entity);
+        this.renderAFrameMixinSection(entity);
+
+        // Dreamweaver-style behaviours / triggers
+        const behaviorAttr = entity.getAttribute('studio-behavior');
+        let behaviors = [];
+        if (behaviorAttr) {
+            try {
+                behaviors = JSON.parse(behaviorAttr.actions || '[]');
+                if (!Array.isArray(behaviors)) behaviors = [];
+            } catch (err) {
+                behaviors = [];
+            }
+        }
+
+        const behaviorGroup = document.createElement('div');
+        behaviorGroup.className = 'property-group';
+        behaviorGroup.innerHTML = `<div class="property-label">Behaviours / Triggers</div>`;
+
+        if (behaviors.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'font-size:0.72rem; color:var(--text-secondary); margin-bottom:6px;';
+            empty.textContent = 'No actions yet. Add an action to make this element interactive.';
+            behaviorGroup.appendChild(empty);
+        }
+
+        behaviors.forEach((action, index) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; align-items:center; gap:6px; background:var(--bg-light); border:1px solid var(--border-color); border-radius:4px; padding:5px 6px; margin-bottom:4px; font-size:0.7rem;';
+            const text = document.createElement('span');
+            text.style.flex = '1';
+            text.textContent = `${action.trigger || 'click'} → ${action.type}${action.value ? ': ' + action.value : ''}`;
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'btn icon-only';
+            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            removeBtn.title = 'Remove action';
+            removeBtn.addEventListener('click', () => {
+                behaviors.splice(index, 1);
+                entity.setAttribute('studio-behavior', 'actions', JSON.stringify(behaviors));
+                this.renderAFramePropertiesPanel(entity);
+            });
+            row.appendChild(text);
+            row.appendChild(removeBtn);
+            behaviorGroup.appendChild(row);
+        });
+
+        const triggerSelect = document.createElement('select');
+        triggerSelect.className = 'component-select';
+        [['click', 'On click'], ['mouseenter', 'On hover'], ['mouseleave', 'On hover out']].forEach(([value, label]) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = label;
+            triggerSelect.appendChild(option);
+        });
+        behaviorGroup.appendChild(triggerSelect);
+
+        const actionSelect = document.createElement('select');
+        actionSelect.className = 'component-select';
+        actionSelect.style.marginTop = '4px';
+        [
+            ['goto-url', 'Go to URL'],
+            ['open-window', 'Open window'],
+            ['popup-message', 'Popup message'],
+            ['play-sound', 'Play audio'],
+            ['stop-sound', 'Stop audio'],
+            ['toggle-visibility', 'Toggle visibility'],
+            ['show-element', 'Show element'],
+            ['hide-element', 'Hide element'],
+            ['swap-image', 'Swap image'],
+            ['start-animation', 'Start animation'],
+            ['stop-animation', 'Stop animation'],
+            ['enter-vr', 'Enter VR'],
+            ['enter-ar', 'Enter AR'],
+            ['go-back', 'Go back']
+        ].forEach(([value, label]) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = label;
+            actionSelect.appendChild(option);
+        });
+        behaviorGroup.appendChild(actionSelect);
+
+        const targetInput = document.createElement('input');
+        targetInput.type = 'text';
+        targetInput.className = 'component-select';
+        targetInput.style.marginTop = '4px';
+        targetInput.placeholder = 'Target selector (optional, e.g. #my-box)';
+        behaviorGroup.appendChild(targetInput);
+
+        const valueInput = document.createElement('input');
+        valueInput.type = 'text';
+        valueInput.className = 'component-select';
+        valueInput.style.marginTop = '4px';
+        valueInput.placeholder = 'URL, text, image URL or value';
+        behaviorGroup.appendChild(valueInput);
+
+        const addBehaviorBtn = document.createElement('button');
+        addBehaviorBtn.className = 'btn primary';
+        addBehaviorBtn.style.cssText = 'width:100%; margin-top:6px;';
+        addBehaviorBtn.innerHTML = '<i class="fas fa-plus"></i> Add Action';
+        addBehaviorBtn.addEventListener('click', () => {
+            const action = {
+                trigger: triggerSelect.value,
+                type: actionSelect.value,
+                target: targetInput.value.trim(),
+                value: valueInput.value.trim()
+            };
+            if (!action.target) delete action.target;
+            if (!action.value) delete action.value;
+            behaviors.push(action);
+            entity.setAttribute('studio-behavior', 'actions', JSON.stringify(behaviors));
+            this.renderAFramePropertiesPanel(entity);
+        });
+        behaviorGroup.appendChild(addBehaviorBtn);
+
+        this.propsContent.appendChild(behaviorGroup);
+
+        // Delete selected entity
+        const actions = document.createElement('div');
+        actions.className = 'property-group';
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn';
+        deleteBtn.style.width = '100%';
+        deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Delete Element';
+        deleteBtn.addEventListener('click', () => {
+            this.app.aframeManager?.removeEntity(entity);
+            this.renderAFramePropertiesPanel(null);
+        });
+        actions.appendChild(deleteBtn);
+        this.propsContent.appendChild(actions);
+    }
+
+    renderAFrameComponentSection(entity) {
+        const system = this.app.componentSystem;
+        if (!system) return;
+
+        const group = document.createElement('div');
+        group.className = 'property-group';
+        group.innerHTML = '<div class="property-label">Components</div>';
+
+        const components = system.getComponents(entity);
+        if (components.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'font-size:0.72rem; color:var(--text-secondary); margin-bottom:6px;';
+            empty.textContent = 'No optional components on this element yet.';
+            group.appendChild(empty);
+        }
+
+        components.forEach(component => {
+            const details = document.createElement('details');
+            details.className = 'component-item';
+            details.style.display = 'block';
+
+            const summary = document.createElement('summary');
+            summary.style.cssText = 'display:flex; align-items:center; gap:6px; cursor:pointer;';
+            const label = document.createElement('span');
+            label.className = 'component-name';
+            label.textContent = component.label;
+            const badge = document.createElement('span');
+            badge.style.cssText = 'font-size:0.6rem; color:var(--text-secondary);';
+            badge.textContent = component.name;
+            const removeBtn = document.createElement('i');
+            removeBtn.className = 'fas fa-times remove-component';
+            removeBtn.title = 'Remove component';
+            removeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                system.removeComponent(entity, component.name);
+                this.renderAFramePropertiesPanel(entity);
+            });
+            summary.appendChild(label);
+            summary.appendChild(badge);
+            summary.appendChild(removeBtn);
+            details.appendChild(summary);
+
+            const body = document.createElement('div');
+            body.style.cssText = 'display:flex; flex-direction:column; gap:5px; padding-top:6px;';
+            const schema = system.getSchema(component.name);
+
+            if (Object.keys(schema).length === 0) {
+                const textarea = document.createElement('textarea');
+                textarea.className = 'component-select';
+                textarea.rows = 3;
+                textarea.value = system.serialize(entity, component.name);
+                textarea.addEventListener('change', () => {
+                    system.setRawData(entity, component.name, textarea.value);
+                });
+                body.appendChild(textarea);
+            } else {
+                Object.entries(schema).forEach(([property, definition]) => {
+                    const current = component.data[property] ?? definition.default ?? '';
+                    const row = document.createElement('div');
+                    row.className = 'input-group';
+                    const labelEl = document.createElement('span');
+                    labelEl.textContent = property;
+                    row.appendChild(labelEl);
+
+                    let input;
+                    if (definition.type === 'boolean') {
+                        input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.checked = current === true || current === 'true';
+                        input.addEventListener('change', () => {
+                            system.setProperty(entity, component.name, property, input.checked);
+                        });
+                    } else if (definition.type === 'select') {
+                        input = document.createElement('select');
+                        input.className = 'component-select';
+                        (definition.options || []).forEach(optionValue => {
+                            const option = document.createElement('option');
+                            option.value = optionValue;
+                            option.textContent = optionValue;
+                            input.appendChild(option);
+                        });
+                        input.value = current;
+                        input.addEventListener('change', () => {
+                            system.setProperty(entity, component.name, property, input.value);
+                        });
+                    } else {
+                        input = document.createElement('input');
+                        input.type = definition.type === 'number' ? 'number'
+                            : definition.type === 'color' ? 'color' : 'text';
+                        if (definition.type === 'number') {
+                            if (definition.min !== undefined) input.min = definition.min;
+                            if (definition.max !== undefined) input.max = definition.max;
+                            input.step = definition.step || 0.1;
+                        }
+                        input.value = current;
+                        input.addEventListener('change', () => {
+                            let value = input.value;
+                            if (definition.type === 'number') value = Number(value) || 0;
+                            system.setProperty(entity, component.name, property, value);
+                        });
+                    }
+
+                    row.appendChild(input);
+                    body.appendChild(row);
+                });
+            }
+
+            details.appendChild(body);
+            group.appendChild(details);
+        });
+
+        const currentNames = new Set(components.map(component => component.name));
+        const addRow = document.createElement('div');
+        addRow.style.cssText = 'display:flex; gap:6px; margin-top:6px;';
+        const select = document.createElement('select');
+        select.className = 'component-select';
+        select.innerHTML = '<option value="">Add component...</option>';
+
+        const grouped = {};
+        system.getAvailableComponents()
+            .filter(component => !currentNames.has(component.name))
+            .forEach(component => {
+                if (!grouped[component.category]) grouped[component.category] = [];
+                grouped[component.category].push(component);
+            });
+
+        Object.entries(grouped).forEach(([category, items]) => {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = category;
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.name;
+                option.textContent = item.label;
+                optgroup.appendChild(option);
+            });
+            select.appendChild(optgroup);
+        });
+
+        const addBtn = document.createElement('button');
+        addBtn.className = 'btn';
+        addBtn.innerHTML = '<i class="fas fa-plus"></i>';
+        addBtn.title = 'Add component';
+        addBtn.addEventListener('click', () => {
+            if (!select.value) return;
+            system.addComponent(entity, select.value);
+            this.renderAFramePropertiesPanel(entity);
+        });
+
+        addRow.appendChild(select);
+        addRow.appendChild(addBtn);
+        group.appendChild(addRow);
+        this.propsContent.appendChild(group);
+    }
+
+    renderAFrameMixinSection(entity) {
+        const system = this.app.mixinSystem;
+        if (!system) return;
+
+        const group = document.createElement('div');
+        group.className = 'property-group';
+        group.innerHTML = '<div class="property-label">Mixins</div>';
+
+        const createBtn = document.createElement('button');
+        createBtn.className = 'btn';
+        createBtn.style.cssText = 'width:100%; font-size:0.72rem; margin-bottom:6px;';
+        createBtn.innerHTML = '<i class="fas fa-clone"></i> Create Mixin from Element';
+        createBtn.addEventListener('click', () => {
+            const suggested = entity.id ? entity.id + ' Mixin' : 'New Mixin';
+            const name = window.prompt('Mixin name:', suggested);
+            if (!name) return;
+            system.createFromElement(entity, name);
+            this.renderAFramePropertiesPanel(entity);
+        });
+        group.appendChild(createBtn);
+
+        const mixins = system.getMixins();
+        const applied = new Set(system.getAppliedMixinIds(entity));
+
+        if (mixins.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'font-size:0.72rem; color:var(--text-secondary);';
+            empty.textContent = 'No mixins yet. Create one from an element to reuse its components.';
+            group.appendChild(empty);
+        }
+
+        mixins.forEach(mixin => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; align-items:center; gap:6px; background:var(--bg-light); border:1px solid var(--border-color); border-radius:4px; padding:5px 6px; margin-bottom:4px; font-size:0.7rem;';
+
+            const name = document.createElement('span');
+            name.style.flex = '1';
+            name.textContent = mixin.name;
+
+            const applyBtn = document.createElement('button');
+            applyBtn.className = 'btn icon-only';
+            applyBtn.title = applied.has(mixin.id) ? 'Remove mixin from element' : 'Apply mixin to element';
+            applyBtn.innerHTML = applied.has(mixin.id)
+                ? '<i class="fas fa-check"></i>'
+                : '<i class="fas fa-plus"></i>';
+            applyBtn.addEventListener('click', () => {
+                if (applied.has(mixin.id)) system.removeFromElement(entity, mixin.id);
+                else system.applyToElement(entity, mixin.id);
+                this.renderAFramePropertiesPanel(entity);
+            });
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn icon-only';
+            deleteBtn.title = 'Delete mixin';
+            deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+            deleteBtn.addEventListener('click', () => {
+                if (!window.confirm(`Delete mixin "${mixin.name}"?`)) return;
+                system.deleteMixin(mixin.id);
+                this.renderAFramePropertiesPanel(entity);
+            });
+
+            row.appendChild(name);
+            row.appendChild(applyBtn);
+            row.appendChild(deleteBtn);
+            group.appendChild(row);
+        });
+
+        this.propsContent.appendChild(group);
+    }
+
+    renderAFrameSceneSettings() {
+        const scene = document.getElementById('aframe-scene');
+        if (!scene) {
+            this.propsContent.innerHTML = '<div class="empty-state"><p>A-Frame scene is loading...</p></div>';
+            return;
+        }
+
+        const header = document.createElement('div');
+        header.className = 'property-group';
+        header.innerHTML = '<div style="font-weight:bold; color:var(--accent-primary); border-bottom:1px solid #333; padding-bottom:5px;">Scene / World</div>';
+        this.propsContent.appendChild(header);
+
+        const fogAttr = scene.getAttribute('fog') || {};
+        const fogEnabled = scene.hasAttribute('fog');
+        const fogDensity = Number(fogAttr.density ?? 0.028);
+        const fogColor = typeof fogAttr.color === 'object' && fogAttr.color.getHexString
+            ? '#' + fogAttr.color.getHexString()
+            : (fogAttr.color || '#1a1a2e');
+
+        const fogGroup = document.createElement('div');
+        fogGroup.className = 'property-group';
+        fogGroup.innerHTML = `
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem;"><input type="checkbox" class="fog-enabled" ${fogEnabled ? 'checked' : ''}> Fog</label>
+            <div class="input-group"><span>Color</span><input type="color" class="fog-color" value="${fogColor}"></div>
+            <div class="input-group"><span>Density</span><input type="number" class="fog-density" min="0" max="0.2" step="0.002" value="${fogDensity}"></div>
+        `;
+
+        const applyFog = () => {
+            if (!fogGroup.querySelector('.fog-enabled').checked) {
+                scene.removeAttribute('fog');
+                return;
+            }
+            scene.setAttribute('fog', {
+                type: 'exponential',
+                color: fogGroup.querySelector('.fog-color').value,
+                density: Number(fogGroup.querySelector('.fog-density').value)
+            });
+        };
+        fogGroup.querySelector('.fog-enabled').addEventListener('change', applyFog);
+        fogGroup.querySelector('.fog-color').addEventListener('input', applyFog);
+        fogGroup.querySelector('.fog-density').addEventListener('change', applyFog);
+        this.propsContent.appendChild(fogGroup);
+
+        const shadowAttr = scene.getAttribute('shadow');
+        const shadowEnabled = !!shadowAttr || scene.hasAttribute('shadow');
+        const shadowGroup = document.createElement('div');
+        shadowGroup.className = 'property-group';
+        shadowGroup.innerHTML = `
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem;"><input type="checkbox" class="shadow-enabled" ${shadowEnabled ? 'checked' : ''}> Shadows</label>
+            <div style="font-size:0.7rem; color:var(--text-secondary); margin-top:4px;">Add shadows to all scene lights.</div>
+        `;
+        shadowGroup.querySelector('.shadow-enabled').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                scene.setAttribute('shadow', 'type', 'pcfsoft');
+                scene.querySelectorAll('a-light').forEach(light => {
+                    light.setAttribute('shadow', 'cast', true);
+                });
+            } else {
+                scene.removeAttribute('shadow');
+                scene.querySelectorAll('a-light').forEach(light => {
+                    light.removeAttribute('shadow');
+                });
+            }
+        });
+        this.propsContent.appendChild(shadowGroup);
+
+        // Sky colour / skybox shortcut
+        const skyEl = scene.querySelector('a-sky');
+        const rawSkyColor = skyEl ? skyEl.getAttribute('color') : null;
+        const skyColor = rawSkyColor && typeof rawSkyColor === 'object' && rawSkyColor.getHexString
+            ? '#' + rawSkyColor.getHexString()
+            : (typeof rawSkyColor === 'string' && /^#[0-9a-f]{3,8}$/i.test(rawSkyColor) ? rawSkyColor : '#1a1a2e');
+        const skyGroup = document.createElement('div');
+        skyGroup.className = 'property-group';
+        skyGroup.innerHTML = `
+            <div class="property-label">Sky / Skybox</div>
+            <div class="input-group"><span>Color</span><input type="color" class="sky-color" value="${skyColor}"></div>
+            <button class="btn" style="width:100%; margin-top:6px;"><i class="fas fa-plus"></i> ${skyEl ? 'Update Sky Colour' : 'Add Skybox'}</button>
+        `;
+        const ensureSky = (color) => {
+            let sky = scene.querySelector('a-sky');
+            if (!sky) {
+                sky = this.app.aframeManager?.addEntity('a-sky', { color }) || document.createElement('a-sky');
+                if (!sky.parentNode) scene.appendChild(sky);
+            }
+            sky.setAttribute('color', color);
+            return sky;
+        };
+        skyGroup.querySelector('.sky-color').addEventListener('input', (e) => {
+            ensureSky(e.target.value);
+        });
+        skyGroup.querySelector('button').addEventListener('click', () => {
+            const sky = ensureSky(skyGroup.querySelector('.sky-color').value);
+            this.app.aframeManager?.selectEntity(sky);
+        });
+        this.propsContent.appendChild(skyGroup);
+
+        const hint = document.createElement('div');
+        hint.className = 'property-group';
+        hint.style.cssText = 'font-size:0.72rem; color:var(--text-secondary);';
+        hint.innerHTML = '<i class="fas fa-lightbulb"></i> Select an A-Frame element to edit its position, media and behaviours.';
+        this.propsContent.appendChild(hint);
     }
 
     renderPropertiesPanel(selectedObject) {
@@ -1412,6 +2349,7 @@ export class UI {
     toggleSceneView() {
         const sceneSection = document.getElementById('scene-section');
         const materialsSection = document.getElementById('materials-section');
+        const assetsSection = document.getElementById('assets-section');
         const propsContent = document.getElementById('props-content');
         const layersList = document.getElementById('layers-list');
 
@@ -1419,26 +2357,18 @@ export class UI {
             const isSceneVisible = sceneSection.style.display !== 'none';
 
             if (isSceneVisible) {
-                // Switch to normal view
-                sceneSection.style.display = 'none';
-                materialsSection.style.display = 'none';
-                propsContent.style.display = 'block';
-                layersList.style.display = 'block';
-                document.querySelectorAll('.panel-header').forEach(header => {
-                    header.style.display = 'flex';
-                });
+                this.resetPanelToDefault();
             } else {
-                // Switch to scene view
                 sceneSection.style.display = 'flex';
                 materialsSection.style.display = 'none';
+                if (assetsSection) assetsSection.style.display = 'none';
                 propsContent.style.display = 'none';
                 layersList.style.display = 'none';
-                document.querySelectorAll('.panel-header').forEach((header, index) => {
-                    if (index === 2) { // Scene header
-                        header.style.display = 'flex';
-                    } else {
-                        header.style.display = 'none';
-                    }
+                document.querySelectorAll('.panel-header').forEach(header => {
+                    header.style.display = 'none';
+                });
+                sceneSection.querySelectorAll('.panel-header').forEach(header => {
+                    header.style.display = 'flex';
                 });
             }
 

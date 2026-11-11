@@ -29,7 +29,7 @@ export class MaterialsManager {
 
     createMaterial(name, color, metalness, roughness) {
         const material = {
-            id: 'mat-' + Date.now(),
+            id: 'mat-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
             name: name,
             color: color,
             metalness: metalness,
@@ -210,48 +210,94 @@ export class MaterialsManager {
     }
 
     applyMaterialToSelected(material) {
+        if (!material) return;
+
+        // A-Frame mode uses its own selection model. Apply the material to the
+        // selected A-Frame entity so the same Materials panel works in both
+        // the Three.js editor and the A-Frame builder.
+        const aframeManager = this.app.aframeManager;
+        if (aframeManager && aframeManager.isAFrameMode) {
+            const entity = aframeManager.getSelectedEntity();
+            if (entity) {
+                const color = '#' + material.color.toString(16).padStart(6, '0');
+                entity.setAttribute('material', {
+                    color: color,
+                    metalness: material.metalness,
+                    roughness: material.roughness
+                });
+
+                if (!material.objectsUsing.includes(entity)) {
+                    material.objectsUsing.push(entity);
+                }
+
+                this.app.ui.showNotification(
+                    `Applied material to ${entity.id || entity.tagName.toLowerCase()}`,
+                    'success'
+                );
+                this.refreshVisibleMaterialViews();
+                return;
+            }
+        }
+
         if (!this.app.selectedObject) {
             this.app.ui.showNotification('No object selected!', 'error');
             return;
         }
 
         const obj = this.app.selectedObject;
-        let targetMesh = null;
+        const targetMeshes = [];
 
-        if (obj.userData.type === 'shape') {
-            targetMesh = obj;
-        } else if (obj.userData.name && obj.parent.userData.name && obj.parent.userData.name.includes('Joint')) {
-            // Figure part
-            targetMesh = obj.children.find(c => c.isMesh);
-        } else if (obj.userData.type === 'figure') {
-            // Apply to whole figure
-            obj.traverse(c => {
-                if (c.isMesh && c.material) {
-                    c.material.color.setHex(material.color);
-                    c.material.metalness = material.metalness;
-                    c.material.roughness = material.roughness;
-                }
+        // Collect every mesh that should receive the material. This covers
+        // shapes, figures, and any grouped Three.js object.
+        if (obj.isMesh) {
+            targetMeshes.push(obj);
+        } else {
+            obj.traverse(child => {
+                if (child.isMesh) targetMeshes.push(child);
             });
+        }
+
+        if (targetMeshes.length === 0) {
+            this.app.ui.showNotification('Selected object has no material to edit', 'error');
             return;
         }
 
-        if (targetMesh && targetMesh.material) {
-            targetMesh.material.color.setHex(material.color);
-            targetMesh.material.metalness = material.metalness;
-            targetMesh.material.roughness = material.roughness;
+        targetMeshes.forEach(mesh => {
+            if (!mesh.material) return;
+            mesh.material.color.setHex(material.color);
+            mesh.material.metalness = material.metalness;
+            mesh.material.roughness = material.roughness;
+        });
 
-            // Add to objects using this material
-            if (!material.objectsUsing.includes(obj)) {
-                material.objectsUsing.push(obj);
-            }
-
-            this.app.ui.showNotification(`Applied material to ${obj.userData.name || obj.userData.type}`, 'success');
-
-            // Update the UI to reflect the new material properties
-            if (this.app.ui && this.app.ui.updateMaterialPropertiesUI) {
-                this.app.ui.updateMaterialPropertiesUI(material, targetMesh);
-            }
+        // Add to objects using this material
+        const trackedObject = obj.userData.type === 'figure'
+            ? obj
+            : (obj.parent && obj.parent.userData && obj.parent.userData.type === 'figure'
+                ? obj.parent
+                : obj);
+        if (!material.objectsUsing.includes(trackedObject)) {
+            material.objectsUsing.push(trackedObject);
         }
+
+        this.app.ui.showNotification(
+            `Applied material to ${obj.userData.name || obj.userData.type || 'object'}`,
+            'success'
+        );
+
+        // Update the UI to reflect the new material properties
+        if (this.app.ui && this.app.ui.updateMaterialPropertiesUI) {
+            this.app.ui.updateMaterialPropertiesUI(material, targetMeshes[0]);
+        }
+
+        this.refreshVisibleMaterialViews();
+    }
+
+    refreshVisibleMaterialViews() {
+        const materialsSection = document.getElementById('materials-section');
+        if (materialsSection && materialsSection.style.display !== 'none') {
+            this.renderMaterialsSection();
+        }
+        this.render();
     }
 
     editMaterial(material) {
