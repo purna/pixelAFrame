@@ -760,6 +760,264 @@ export class UI {
         this.switchRightTab('hierarchy');
     }
 
+    renderAssetsSection() {
+        const container = document.getElementById('assets-content');
+        const assetSystem = this.app.assetSystem;
+        if (!container) return;
+        if (!assetSystem) {
+            container.innerHTML = '<div class="empty-state">Asset system is not available.</div>';
+            return;
+        }
+
+        this.assetTab = this.assetTab || 'all';
+        this.assetSearch = this.assetSearch || '';
+        container.innerHTML = '';
+
+        const tabs = [
+            { id: 'all', label: 'All', icon: 'fa-layer-group', types: ['image', 'panorama', 'video', 'audio', 'model'] },
+            { id: 'images', label: 'Images', icon: 'fa-image', types: ['image', 'panorama'] },
+            { id: 'media', label: 'Media', icon: 'fa-video', types: ['video'] },
+            { id: 'audio', label: 'Audio', icon: 'fa-volume-up', types: ['audio'] },
+            { id: 'models', label: 'Models', icon: 'fa-cubes', types: ['model'] },
+            { id: 'mixins', label: 'Mixins', icon: 'fa-clone', types: [] },
+            { id: 'materials', label: 'Materials', icon: 'fa-palette', types: [] }
+        ];
+
+        const tabBar = document.createElement('div');
+        tabBar.className = 'assets-tabs';
+        tabs.forEach(tab => {
+            const button = document.createElement('button');
+            button.className = 'asset-tab' + (this.assetTab === tab.id ? ' active' : '');
+            button.innerHTML = `<i class="fas ${tab.icon}"></i> ${tab.label}`;
+            button.addEventListener('click', () => {
+                this.assetTab = tab.id;
+                this.renderAssetsSection();
+            });
+            tabBar.appendChild(button);
+        });
+        container.appendChild(tabBar);
+
+        const searchWrap = document.createElement('div');
+        searchWrap.className = 'asset-search';
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.placeholder = 'Search assets...';
+        searchInput.value = this.assetSearch;
+        searchWrap.appendChild(searchInput);
+        container.appendChild(searchWrap);
+
+        const listContainer = document.createElement('div');
+        listContainer.className = 'assets-list';
+        let renderList = () => {};
+
+        const makeRow = (preview, name, meta, actions) => {
+            const row = document.createElement('div');
+            row.className = 'material-item';
+            row.style.alignItems = 'center';
+            const info = document.createElement('div');
+            info.className = 'material-info';
+            info.innerHTML = `<div style="font-size:0.75rem;color:var(--text-primary);font-weight:bold;">${name}</div><div style="font-size:0.65rem;color:var(--text-secondary);">${meta}</div>`;
+            const actionWrap = document.createElement('div');
+            actionWrap.className = 'material-actions';
+            actions.forEach(action => actionWrap.appendChild(action));
+            row.appendChild(preview);
+            row.appendChild(info);
+            row.appendChild(actionWrap);
+            return row;
+        };
+
+        const iconButton = (icon, title, onClick) => {
+            const button = document.createElement('button');
+            button.className = 'btn icon-only';
+            button.title = title;
+            button.innerHTML = `<i class="fas ${icon}"></i>`;
+            button.addEventListener('click', onClick);
+            return button;
+        };
+
+        if (this.assetTab !== 'materials' && this.assetTab !== 'mixins') {
+            const currentTab = tabs.find(tab => tab.id === this.assetTab) || tabs[0];
+            const tabLabel = currentTab.id === 'all' ? 'Assets' : currentTab.label;
+            const form = document.createElement('div');
+            form.className = 'property-group asset-add-form';
+            const options = currentTab.id === 'all'
+                ? '<option value="image">Image</option><option value="panorama">360 Panorama</option><option value="video">Video</option><option value="audio">Audio</option><option value="model">3D Model</option>'
+                : currentTab.id === 'images' ? '<option value="image">Image</option><option value="panorama">360 Panorama</option>'
+                : currentTab.id === 'media' ? '<option value="video">Video</option>'
+                : currentTab.id === 'audio' ? '<option value="audio">Audio</option>'
+                : '<option value="model">3D Model (.glb / .gltf)</option>';
+            form.innerHTML = `
+                <div class="property-label">Add ${tabLabel}</div>
+                <div class="input-group"><span>Name</span><input type="text" class="asset-name" placeholder="My asset"></div>
+                <div class="input-group"><span>Type</span><select class="component-select asset-type">${options}</select></div>
+                <div class="input-group"><span>URL</span><input type="text" class="asset-url" placeholder="https://..."></div>
+                <input type="file" class="asset-file" style="display:none">
+                <button class="btn asset-file-btn" style="width:100%;margin-top:5px;"><i class="fas fa-folder-open"></i> Choose File</button>
+                <button class="btn primary asset-add-btn" style="width:100%;margin-top:5px;"><i class="fas fa-plus"></i> Add Asset</button>
+            `;
+            const fileInput = form.querySelector('.asset-file');
+            fileInput.accept = currentTab.id === 'audio' ? 'audio/*' : currentTab.id === 'media' ? 'video/*' : currentTab.id === 'models' ? '.glb,.gltf' : currentTab.id === 'all' ? '' : 'image/*';
+            form.querySelector('.asset-file-btn').addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', () => {
+                const file = fileInput.files && fileInput.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    form.querySelector('.asset-url').value = reader.result;
+                    if (!form.querySelector('.asset-name').value) form.querySelector('.asset-name').value = file.name;
+                };
+                reader.readAsDataURL(file);
+            });
+            form.querySelector('.asset-add-btn').addEventListener('click', () => {
+                const src = form.querySelector('.asset-url').value.trim();
+                if (!src) {
+                    this.showNotification('Enter an asset URL or choose a file first.', 'error');
+                    return;
+                }
+                assetSystem.addAsset({
+                    name: form.querySelector('.asset-name').value.trim(),
+                    type: form.querySelector('.asset-type').value,
+                    src
+                });
+                this.renderAssetsSection();
+            });
+            container.appendChild(form);
+            container.appendChild(listContainer);
+
+            renderList = () => {
+                listContainer.innerHTML = '';
+                const query = this.assetSearch.toLowerCase();
+                const assets = assetSystem.getAssets().filter(asset => {
+                    if (!currentTab.types.includes(asset.type)) return false;
+                    return !query || `${asset.name} ${asset.type} ${asset.id}`.toLowerCase().includes(query);
+                });
+                if (!assets.length) {
+                    listContainer.innerHTML = `<div class="empty-state"><p>No ${tabLabel.toLowerCase()} yet.</p><p>Add a URL or choose a file above.</p></div>`;
+                    return;
+                }
+                assets.forEach(asset => {
+                    const preview = document.createElement('div');
+                    preview.className = 'material-preview';
+                    if (asset.type === 'image' || asset.type === 'panorama') {
+                        preview.style.backgroundImage = `url("${asset.src}")`;
+                        preview.style.backgroundSize = 'cover';
+                        preview.style.backgroundPosition = 'center';
+                    } else {
+                        const icons = { video: 'fa-video', audio: 'fa-volume-up', model: 'fa-cubes' };
+                        preview.innerHTML = `<i class="fas ${icons[asset.type] || 'fa-file'}" style="display:flex;align-items:center;justify-content:center;height:100%;"></i>`;
+                    }
+                    listContainer.appendChild(makeRow(
+                        preview,
+                        asset.name,
+                        `${asset.type} · #${asset.id}`,
+                        [
+                            iconButton('fa-plus', 'Place in scene', () => assetSystem.addAssetToScene(asset.id)),
+                            iconButton('fa-check', 'Use on selected element', () => {
+                                if (!assetSystem.applyAssetToSelected(asset.id)) this.showNotification('Select an A-Frame element first.', 'info');
+                            }),
+                            iconButton('fa-trash', 'Delete asset', () => {
+                                if (!window.confirm(`Delete asset "${asset.name}"?`)) return;
+                                assetSystem.removeAsset(asset.id);
+                                this.renderAssetsSection();
+                            })
+                        ]
+                    ));
+                });
+            };
+        } else if (this.assetTab === 'mixins') {
+            const mixinSystem = this.app.mixinSystem;
+            const form = document.createElement('div');
+            form.className = 'property-group asset-add-form';
+            form.innerHTML = '<div class="property-label">Mixins</div><button class="btn primary" style="width:100%;"><i class="fas fa-clone"></i> Create Mixin from Selected Element</button>';
+            form.querySelector('button').addEventListener('click', () => {
+                const selected = this.app.aframeManager?.getSelectedEntity?.();
+                if (!selected) {
+                    this.showNotification('Select an A-Frame element first.', 'info');
+                    return;
+                }
+                const name = window.prompt('Mixin name:', selected.id ? selected.id + ' Mixin' : 'New Mixin');
+                if (!name) return;
+                mixinSystem?.createFromElement(selected, name);
+                this.renderAssetsSection();
+            });
+            container.appendChild(form);
+            container.appendChild(listContainer);
+            renderList = () => {
+                listContainer.innerHTML = '';
+                const query = this.assetSearch.toLowerCase();
+                const mixins = (mixinSystem?.getMixins() || []).filter(mixin => !query || `${mixin.name} ${mixin.id}`.toLowerCase().includes(query));
+                if (!mixins.length) {
+                    listContainer.innerHTML = '<div class="empty-state"><p>No mixins yet.</p><p>Save a selected element as a reusable mixin.</p></div>';
+                    return;
+                }
+                mixins.forEach(mixin => {
+                    const preview = document.createElement('div');
+                    preview.className = 'material-preview';
+                    preview.innerHTML = '<i class="fas fa-clone" style="display:flex;align-items:center;justify-content:center;height:100%;"></i>';
+                    const components = Object.keys(mixin.components || {});
+                    listContainer.appendChild(makeRow(
+                        preview,
+                        mixin.name,
+                        `${components.length ? components.join(', ') : 'No components'} · #${mixin.id}`,
+                        [
+                            iconButton('fa-check', 'Apply to selected element', () => {
+                                const selected = this.app.aframeManager?.getSelectedEntity?.();
+                                if (!selected) {
+                                    this.showNotification('Select an A-Frame element first.', 'info');
+                                    return;
+                                }
+                                mixinSystem.applyToElement(selected, mixin.id);
+                                this.renderAFramePropertiesPanel(selected);
+                            }),
+                            iconButton('fa-trash', 'Delete mixin', () => {
+                                if (!window.confirm(`Delete mixin "${mixin.name}"?`)) return;
+                                mixinSystem.deleteMixin(mixin.id);
+                                this.renderAssetsSection();
+                            })
+                        ]
+                    ));
+                });
+            };
+        } else {
+            const materialsManager = this.app.materialsManager;
+            const form = document.createElement('div');
+            form.className = 'property-group asset-add-form';
+            form.innerHTML = '<div class="property-label">Materials</div><button class="btn primary" style="width:100%;"><i class="fas fa-plus"></i> Create Material</button>';
+            form.querySelector('button').addEventListener('click', () => materialsManager?.createNewMaterial());
+            container.appendChild(form);
+            container.appendChild(listContainer);
+            renderList = () => {
+                listContainer.innerHTML = '';
+                const query = this.assetSearch.toLowerCase();
+                const materials = (materialsManager?.materials || []).filter(material => !query || `${material.name} ${material.id}`.toLowerCase().includes(query));
+                if (!materials.length) {
+                    listContainer.innerHTML = '<div class="empty-state">No materials yet. Create one to reuse it across elements.</div>';
+                    return;
+                }
+                materials.forEach(material => {
+                    const preview = document.createElement('div');
+                    preview.className = 'material-preview';
+                    preview.style.backgroundColor = '#' + material.color.toString(16).padStart(6, '0');
+                    listContainer.appendChild(makeRow(
+                        preview,
+                        material.name,
+                        `M: ${material.metalness.toFixed(2)} · R: ${material.roughness.toFixed(2)}`,
+                        [
+                            iconButton('fa-check', 'Apply to selected element', () => materialsManager?.applyMaterialToSelected(material)),
+                            iconButton('fa-edit', 'Edit material', () => materialsManager?.editMaterial(material))
+                        ]
+                    ));
+                });
+            };
+        }
+
+        searchInput.addEventListener('input', () => {
+            this.assetSearch = searchInput.value;
+            renderList();
+        });
+        renderList();
+    }
+
     setupPanelTabs() {
         // Add event listeners for panel tabs
         document.querySelectorAll('.panel-tab').forEach(tab => {
