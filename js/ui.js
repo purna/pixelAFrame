@@ -2152,7 +2152,25 @@ export class UI {
                 row.appendChild(label);
 
                 let input;
-                if (param.type === 'entity') {
+                if (param.type === 'audio-asset') {
+                    input = document.createElement('select');
+                    input.className = 'component-select';
+                    const emptyOption = document.createElement('option');
+                    emptyOption.value = '';
+                    emptyOption.textContent = 'Choose sound asset...';
+                    input.appendChild(emptyOption);
+
+                    const assets = this.app.assetSystem?.getAssets?.() || [];
+                    assets
+                        .filter(asset => asset.type === 'audio')
+                        .forEach(asset => {
+                            const option = document.createElement('option');
+                            option.value = '#' + asset.id;
+                            option.textContent = `${asset.name} (#${asset.id})`;
+                            input.appendChild(option);
+                        });
+                    input.value = param.default || '';
+                } else if (param.type === 'entity') {
                     input = document.createElement('select');
                     input.className = 'component-select';
                     const selfOption = document.createElement('option');

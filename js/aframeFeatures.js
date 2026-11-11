@@ -292,6 +292,7 @@ export const AFrameFeatureScript = `
                     break;
                 case 'speak-text':
                     if (window.speechSynthesis && value) {
+                        speechSynthesis.cancel();
                         speechSynthesis.speak(new SpeechSynthesisUtterance(value));
                     }
                     break;
@@ -601,7 +602,11 @@ export const AFrameFeatureScript = `
                 this.el.addEventListener('pinchended', () => { delete this.el._xrPinchPoint; });
             }
         },
-        remove: function () { XR_BODIES.delete(this); },
+        remove: function () {
+            XR_BODIES.delete(this);
+            this.inside.forEach((other) => this.ping('exit', other));
+            this.inside.clear();
+        },
         tick: function () {
             var el = this.el, d = this.data, z = d.size;
             var hand = el.hasAttribute('hand-tracking-controls');
@@ -648,9 +653,14 @@ export const AFrameFeatureScript = `
             this.by = null;
             this.offset = new THREE.Vector3();
             this.hands = [];
+            this.listeners = [];
+            this.dead = false;
             if (!this.el.components['xr-body']) this.el.setAttribute('xr-body', 'mode: collider');
             var scene = this.el.sceneEl;
-            var bindHands = () => scene.querySelectorAll('[laser-controls],[hand-controls],[oculus-touch-controls],[hand-tracking-controls]').forEach((hand) => this.bind(hand));
+            var bindHands = () => {
+                if (this.dead) return;
+                scene.querySelectorAll('[laser-controls],[hand-controls],[oculus-touch-controls],[hand-tracking-controls]').forEach((hand) => this.bind(hand));
+            };
             if (scene.hasLoaded) bindHands();
             else scene.addEventListener('loaded', bindHands);
         },
@@ -658,16 +668,27 @@ export const AFrameFeatureScript = `
             if (this.hands.includes(hand)) return;
             this.hands.push(hand);
             var wanted = (button) => this.data.button === 'either' || this.data.button === button;
+            var on = (eventName, handler) => {
+                hand.addEventListener(eventName, handler);
+                this.listeners.push([hand, eventName, handler]);
+            };
             if (hand.hasAttribute('hand-tracking-controls')) {
-                hand.addEventListener('pinchstarted', (e) => this.take(hand, e.detail.position));
-                hand.addEventListener('pinchmoved', (e) => { if (this.by === hand) this.follow(e.detail.position); });
-                hand.addEventListener('pinchended', () => this.release(hand));
+                on('pinchstarted', (e) => this.take(hand, e.detail.position));
+                on('pinchmoved', (e) => { if (this.by === hand) this.follow(e.detail.position); });
+                on('pinchended', () => this.release(hand));
             } else {
                 ['grip', 'trigger'].forEach((button) => {
-                    hand.addEventListener(button + 'down', () => wanted(button) && this.take(hand));
-                    hand.addEventListener(button + 'up', () => wanted(button) && this.release(hand));
+                    on(button + 'down', () => wanted(button) && this.take(hand));
+                    on(button + 'up', () => wanted(button) && this.release(hand));
                 });
             }
+        },
+        remove: function () {
+            this.dead = true;
+            if (this.by) this.release(this.by);
+            this.listeners.forEach(([hand, eventName, handler]) => hand.removeEventListener(eventName, handler));
+            this.listeners = [];
+            this.hands = [];
         },
         take: function (hand, point) {
             if (this.by) return;
@@ -692,6 +713,25 @@ export const AFrameFeatureScript = `
             this.by = null;
             if (!hand.hasAttribute('hand-tracking-controls')) this.el.sceneEl.object3D.attach(this.el.object3D);
             AFRAME.xrDrop(this.el);
+        }
+    });
+
+    // Keeps rotation values bounded so click-to-rotate can run again.
+    AFRAME.registerComponent('studio-animation-reset', {
+        init: function () {
+            this.handler = (evt) => {
+                if (evt.detail && evt.detail.name && evt.detail.name.indexOf('animation__studio_') !== 0) return;
+                var rotation = this.el.getAttribute('rotation') || { x: 0, y: 0, z: 0 };
+                this.el.setAttribute('rotation', {
+                    x: Number(rotation.x || 0) % 360,
+                    y: Number(rotation.y || 0) % 360,
+                    z: Number(rotation.z || 0) % 360
+                });
+            };
+            this.el.addEventListener('animationcomplete', this.handler);
+        },
+        remove: function () {
+            this.el.removeEventListener('animationcomplete', this.handler);
         }
     });
 })();

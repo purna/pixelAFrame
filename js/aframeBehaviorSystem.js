@@ -244,18 +244,22 @@ export const BEHAVIOR_LIBRARY = {
         category: 'Audio & Feedback',
         description: 'Play a short sound when the object is clicked.',
         params: {
-            src: { type: 'text', default: '', label: 'Sound URL' },
+            asset: { type: 'audio-asset', default: '', label: 'Sound asset' },
+            src: { type: 'text', default: '', label: 'or Sound URL' },
             volume: { type: 'number', default: 1, min: 0, max: 1, step: 0.05, label: 'Volume' }
         },
         apply(entity, params, id) {
+            const source = (params.src || '').trim() || (params.asset ? (params.asset.startsWith('#') ? params.asset : '#' + params.asset) : '');
             const addedSound = !entity.hasAttribute('sound');
             if (addedSound) {
                 entity.setAttribute('sound', {
-                    src: params.src || '',
+                    src: source,
                     loop: false,
                     volume: number(params.volume, 1),
                     autoplay: false
                 });
+            } else if (source) {
+                entity.setAttribute('sound', 'src', source);
             }
             addAction(entity, id, { trigger: 'click', type: 'play-sound' });
             return { attrs: addedSound ? ['sound'] : [], actions: true };
@@ -291,7 +295,7 @@ export const BEHAVIOR_LIBRARY = {
             replacementUrl: { type: 'text', default: '', label: 'or image URL' },
             trigger: { type: 'select', options: ['click', 'mouseenter'], default: 'click', label: 'When' },
             preload: { type: 'boolean', default: true, label: 'Preload image' },
-            restoreOnMouseOut: { type: 'boolean', default: false, label: 'Restore on hover out' }
+            restoreOnMouseOut: { type: 'boolean', default: true, label: 'Restore on hover out' }
         },
         apply(entity, params, id, app) {
             let replacement = (params.replacementUrl || params.replacementAsset || '').trim();

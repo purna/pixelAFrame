@@ -141,7 +141,7 @@ export const DREAMWEAVER_BEHAVIORS = {
             to: { type: 'text', default: '0 360 0', label: 'To' },
             duration: { type: 'number', default: 1500, label: 'Duration (ms)' },
             easing: { type: 'select', options: ['linear', 'easeInOutQuad', 'easeOutElastic', 'easeOutBounce', 'easeInOutSine'], default: 'easeInOutQuad', label: 'Easing' },
-            loop: { type: 'boolean', default: false, label: 'Loop' },
+            loop: { type: 'select', options: ['false', 'true', '2'], default: 'false', label: 'Repeat (2 + alternate = there and back)' },
             direction: { type: 'select', options: ['normal', 'alternate'], default: 'normal', label: 'Direction' },
             trigger: { type: 'select', options: ['click', 'auto'], default: 'click', label: 'When' }
         },
@@ -153,7 +153,8 @@ export const DREAMWEAVER_BEHAVIORS = {
             const animation = {
                 property: params.property || 'rotation', to: params.to || '0 360 0',
                 dur: number(params.duration, 1500), easing: params.easing || 'easeInOutQuad',
-                loop: params.loop === true, dir: params.direction || 'normal'
+                loop: params.loop === true || params.loop === 'true' ? true : params.loop === '2' ? 2 : false,
+                dir: params.direction || 'normal'
             };
             if (animation.property === 'material.color') {
                 animation.property = 'components.material.material.color';
@@ -164,7 +165,12 @@ export const DREAMWEAVER_BEHAVIORS = {
                 addAction(entity, id, { trigger: 'click', type: 'start-animation', target: targetSelector });
             }
             targetElement.setAttribute(attr, animation);
-            return { actions: (params.trigger || 'click') === 'click', external: [{ selector: targetSelector, attr }] };
+            const external = [{ selector: targetSelector, attr }];
+            if (animation.property === 'rotation') {
+                targetElement.setAttribute('studio-animation-reset', '');
+                external.push({ selector: targetSelector, attr: 'studio-animation-reset' });
+            }
+            return { actions: (params.trigger || 'click') === 'click', external };
         }
     },
     'control-animation': {
@@ -235,6 +241,19 @@ export const DREAMWEAVER_BEHAVIORS = {
         apply(entity) {
             entity.setAttribute('studio-drag', 'enabled: true');
             return { attrs: ['studio-drag'] };
+        }
+    },
+    'stop-dragging': {
+        label: 'Stop Dragging', icon: 'fa-hand-paper', category: 'A-Frame',
+        description: 'Disable pointer dragging on an object.',
+        params: {
+            target: { type: 'entity', default: '', label: 'Entity' }
+        },
+        apply(entity, params) {
+            const selector = params.target || '';
+            const target = selector ? document.querySelector(selector) : entity;
+            if (target) target.removeAttribute('studio-drag');
+            return { external: [{ selector, attr: 'studio-drag' }] };
         }
     }
     ,
@@ -341,7 +360,7 @@ export const DREAMWEAVER_BEHAVIORS = {
         description: 'Let controllers pick up and drop the object.',
         params: {
             target: { type: 'entity', default: '', label: 'Entity' },
-            button: { type: 'select', options: ['grip', 'trigger', 'either'], default: 'grip', label: 'Controller button' },
+            button: { type: 'select', options: ['grip', 'trigger', 'either', 'off'], default: 'grip', label: 'Controller button' },
             reach: { type: 'number', default: 0.25, label: 'Reach (m)', min: 0.05, max: 3, step: 0.05 },
             drop: { type: 'select', options: ['stay', 'floor'], default: 'stay', label: 'On release' }
         },
@@ -349,6 +368,10 @@ export const DREAMWEAVER_BEHAVIORS = {
             const targetSelector = params.target || '';
             const target = targetSelector ? document.querySelector(targetSelector) : entity;
             if (!target) return { actions: false };
+            if (params.button === 'off') {
+                target.removeAttribute('xr-grab');
+                return { external: [{ selector: targetSelector, attr: 'xr-grab' }] };
+            }
             target.setAttribute('xr-grab', `button: ${params.button || 'grip'}; reach: ${params.reach ?? 0.25}; drop: ${params.drop || 'stay'}`);
             return { external: [{ selector: targetSelector, attr: 'xr-grab' }, { selector: targetSelector, attr: 'xr-body' }] };
         }
