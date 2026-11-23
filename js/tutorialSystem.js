@@ -27,14 +27,6 @@ class TutorialSystem {
         // Add resize handler
         window.addEventListener('resize', () => this.handleResize());
 
-        // Auto-start tutorial if enabled in settings
-        setTimeout(() => {
-            const enableTutorialsCheckbox = document.getElementById('settings-enable-tutorials');
-            if (enableTutorialsCheckbox && enableTutorialsCheckbox.checked) {
-                this.startTutorial('main');
-            }
-        }, 1000); // Small delay to allow UI to fully initialize
-
         // Check whether the user has completed the current lesson task.
         this.taskTimer = setInterval(() => this.checkTask(), 400);
 
@@ -76,9 +68,8 @@ class TutorialSystem {
         const startTutorialBtn = document.getElementById('startTutorialBtn');
 
         if (enableTutorialsCheckbox) {
-            // Set default to enabled (checked)
-            enableTutorialsCheckbox.checked = true;
-            this.app.tutorialConfig.tutorials.main.enabled = true;
+            // Respect whatever the settings panel loaded; only mirror the state.
+            this.app.tutorialConfig.tutorials.main.enabled = enableTutorialsCheckbox.checked;
 
             enableTutorialsCheckbox.addEventListener('change', (e) => {
                 this.app.tutorialConfig.tutorials.main.enabled = e.target.checked;

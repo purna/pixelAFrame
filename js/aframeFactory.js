@@ -171,6 +171,21 @@ export class AFrameFactory {
             }
             return el;
         }
+
+        // Controls and interaction components are attached to a plain entity.
+        const componentTypes = [
+            'look-controls', 'wasd-controls', 'orbit-controls',
+            'hand-controls', 'hand-tracking-controls', 'laser-controls',
+            'raycaster', 'super-hands'
+        ];
+        if (componentTypes.includes(type)) {
+            const el = this.app.aframeManager.addEntity('a-entity', options);
+            if (el) {
+                const explicit = options[type];
+                el.setAttribute(type, explicit !== undefined ? explicit : (options.component || ''));
+            }
+            return el;
+        }
         
         const aframeType = this.elementTypes[type] || 'a-entity';
         return this.app.aframeManager.addEntity(aframeType, options);

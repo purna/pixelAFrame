@@ -235,6 +235,9 @@ export class MaterialsManager {
                     `Applied material to ${entity.id || entity.tagName.toLowerCase()}`,
                     'success'
                 );
+                window.dispatchEvent(new CustomEvent('aframe-material-applied', {
+                    detail: { entity, material }
+                }));
                 this.refreshVisibleMaterialViews();
                 return;
             }

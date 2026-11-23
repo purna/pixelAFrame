@@ -1664,6 +1664,8 @@ export class UI {
         const fileManager = this.app.fileManager;
         if (!fileManager) return;
 
+        window.dispatchEvent(new CustomEvent('aframe-exported', { detail: { option } }));
+
         if (option === 'html') {
             fileManager.exportHTMLFile();
         } else if (option === 'zip') {
@@ -4218,7 +4220,15 @@ export class UI {
             });
         }
 
-        // Tutorial settings - wire up the start tutorial button in the tutorial tab
+        // Tutorial settings - wire up the tutorial tab buttons
+        const courseStartBtn = document.getElementById('startCourseBtn');
+        if (courseStartBtn) {
+            courseStartBtn.addEventListener('click', () => {
+                this.app.startCourse?.();
+                this.closeUnifiedSettingsModal();
+            });
+        }
+
         const tutorialStartBtn = document.getElementById('startTutorialBtn');
         if (tutorialStartBtn) {
             tutorialStartBtn.addEventListener('click', () => {

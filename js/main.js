@@ -14,6 +14,8 @@ import { CharacterManager } from './characterManager.js';
 import { APP_DEFAULTS } from './config.js';
 import { TutorialConfig } from './tutorialConfig.js';
 import { TutorialSystem } from './tutorialSystem.js';
+import { TutorialPanel } from './tutorialPanel.js';
+import { createAFrameCourse } from './aframeCourse.js';
 import { AFrameSceneManager } from './aframeSceneManager.js';
 import { AFrameFactory } from './aframeFactory.js';
 import { registerAFrameFeatures } from './aframeFeatures.js';
@@ -57,6 +59,7 @@ class StageApp {
         this.notifications = new window.Notifications(); // Init Notifications System
         this.tutorialConfig = new TutorialConfig(); // Init Tutorial Config
         this.tutorialSystem = new TutorialSystem(this); // Init Tutorial System
+        this.tutorialPanel = new TutorialPanel(this, createAFrameCourse()); // 8-session A-Frame course
         this.ui = new UI(this); // UI initialized last so it can access layerManager
         
         // Initialize A-Frame Manager
@@ -182,6 +185,7 @@ class StageApp {
         
         // Initialize Tutorial System
         this.tutorialSystem.init();
+        this.tutorialPanel.init();
 
         // Ensure grid and axes are visible by default
         this.setGridVisible(true);
@@ -824,6 +828,7 @@ class StageApp {
         const vrBtn = document.getElementById('btn-enter-vr');
         if (vrBtn) {
             vrBtn.addEventListener('click', () => {
+                window.dispatchEvent(new CustomEvent('aframe-vr-clicked'));
                 if (this.aframeManager) {
                     // If not in A-Frame mode, switch to it first
                     if (!this.aframeManager.isAFrameMode) {
@@ -933,6 +938,12 @@ class StageApp {
     startTutorial(tutorialId) {
         if (!this.tutorialSystem) return;
         this.tutorialSystem.startTutorial(tutorialId || 'main');
+    }
+
+    // Open the 8-session A-Frame course panel (optionally on a specific session).
+    startCourse(sessionId) {
+        if (!this.tutorialPanel) return;
+        this.tutorialPanel.open(sessionId);
     }
 
     // Add A-Frame element (called from UI)

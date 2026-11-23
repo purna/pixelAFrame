@@ -272,10 +272,24 @@ export class AFrameAssetSystem {
         const selected = this.app.aframeManager?.getSelectedEntity?.();
         if (!asset || !selected) return false;
 
-        selected.setAttribute('src', '#' + asset.id);
-        if (asset.type === 'panorama') {
-            selected.setAttribute('material', 'src', '#' + asset.id);
+        const tag = (selected.tagName || '').toLowerCase();
+        const src = '#' + asset.id;
+
+        // Audio is a component on any entity.
+        if (asset.type === 'audio') {
+            selected.setAttribute('sound', { src });
+            return true;
         }
+
+        // Elements whose src attribute is their media source.
+        if (asset.type === 'model' || ['a-sky', 'a-videosphere', 'a-image', 'a-video', 'a-gltf-model'].includes(tag)) {
+            selected.setAttribute('src', src);
+            return true;
+        }
+
+        // Everything else (box, plane, sphere, cylinder...) receives the image
+        // as a material texture.
+        selected.setAttribute('material', 'src', src);
         return true;
     }
 
